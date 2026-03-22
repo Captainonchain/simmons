@@ -28,7 +28,8 @@
       "Bash(curl:*)",
       "WebFetch(domain:benji.org)",
       "Bash(grep -l '\"\"bg-bb-surface border border-bb-border\"\"' components/*.tsx)",
-      "Bash(node -e \"const rgl = require\\(''react-grid-layout''\\); console.log\\(Object.keys\\(rgl\\)\\)\")"
+      "Bash(node -e \"const rgl = require\\(''react-grid-layout''\\); console.log\\(Object.keys\\(rgl\\)\\)\")",
+      "Bash(node -e \":*)"
     ]
   }
 }

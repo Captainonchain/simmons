@@ -23,13 +23,16 @@ export const Header = memo(function Header({ isConnected, onToggleSidebar }: Hea
   }, []);
 
   return (
-    <header className="bg-bb-panel border-b border-bb-border h-8 px-2 sm:px-3 flex items-center justify-between text-[10px] sm:text-[11px] select-none shrink-0">
-      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+    <header className="bg-bb-panel border-b border-bb-border h-11 px-2 sm:px-3 flex items-center justify-between text-[10px] sm:text-[11px] select-none shrink-0">
+      <div className="flex items-center min-w-0">
         {/* Mobile menu toggle */}
-        <button onClick={onToggleSidebar} className="lg:hidden text-bb-orange px-1">≡</button>
-        <span className="text-bb-orange font-bold tracking-wider shrink-0">SIMMONS</span>
-        <span className="text-bb-dim hidden sm:inline">│</span>
-        <span className="text-bb-amber hidden sm:inline truncate">AUTONOMOUS AI TRADING ON X LAYER</span>
+        <button onClick={onToggleSidebar} className="lg:hidden text-bb-orange px-1 mr-2">≡</button>
+        <div className="flex items-center gap-2 shrink-0 mr-3">
+          <img src="/logo1.png" alt="Simmons" className="h-8 w-8 rounded" />
+          <span className="text-bb-orange font-bold tracking-wider text-[13px]">SIMMONS</span>
+        </div>
+        <span className="text-bb-dim hidden sm:inline mr-3">│</span>
+        <span className="text-bb-amber hidden sm:inline truncate text-[10px]">AUTONOMOUS AI TRADING ON X LAYER</span>
       </div>
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         <span className="text-bb-dim hidden md:inline">{date}</span>
