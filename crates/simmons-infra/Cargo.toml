@@ -20,3 +20,6 @@ tracing = { workspace = true }
 ethers = { workspace = true }
 alloy-primitives = { workspace = true }
 alloy-sol-types = { workspace = true }
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
