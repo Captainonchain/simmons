@@ -2,7 +2,23 @@
 
 mode = "paper"
 capital_usd = 100
-symbols = ["BTC-USDT", "ETH-USDT", "SOL-USDT"]
+symbols = [
+    # Major coins
+    "BTC-USDT", "ETH-USDT", "SOL-USDT", "XRP-USDT", "DOGE-USDT",
+    "ADA-USDT", "AVAX-USDT", "DOT-USDT", "LINK-USDT", "MATIC-USDT",
+    # DeFi
+    "UNI-USDT", "AAVE-USDT", "MKR-USDT", "CRV-USDT", "LDO-USDT",
+    # Layer 2
+    "ARB-USDT", "OP-USDT", "IMX-USDT", "STRK-USDT",
+    # AI & Gaming
+    "FET-USDT", "RNDR-USDT", "INJ-USDT", "GALA-USDT", "AXS-USDT",
+    # Memes
+    "SHIB-USDT", "PEPE-USDT", "FLOKI-USDT", "BONK-USDT", "WIF-USDT",
+    # Infrastructure
+    "ATOM-USDT", "APT-USDT", "SUI-USDT", "SEI-USDT", "TIA-USDT",
+    # OKX ecosystem
+    "OKB-USDT"
+]
 
 [risk]
 max_position_pct = 0.15

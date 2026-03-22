@@ -34,9 +34,9 @@ struct Cli {
     #[arg(long, default_value = "100")]
     capital: f64,
 
-    /// Symbols to trade (comma-separated)
-    #[arg(long, default_value = "BTC-USDT,ETH-USDT")]
-    symbols: String,
+    /// Symbols to trade (comma-separated) - if not specified, uses config file
+    #[arg(long)]
+    symbols: Option<String>,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -87,11 +87,13 @@ async fn main() -> Result<()> {
         "sim" | "simulation" => TradingMode::Simulation,
         _ => TradingMode::Paper,
     };
-    config.symbols = cli
-        .symbols
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .collect();
+    // Only override symbols if explicitly provided via CLI
+    if let Some(symbols) = cli.symbols {
+        config.symbols = symbols
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect();
+    }
 
     info!("╔═══════════════════════════════════════════════════════════╗");
     info!("║                      SIMMONS v0.1.0                       ║");
