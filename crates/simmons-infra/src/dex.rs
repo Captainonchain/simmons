@@ -295,7 +295,56 @@ impl DexClient {
             }
         }
 
-        // TODO: Multi-hop routes (token_in -> intermediate -> token_out)
+        // Multi-hop routes (token_in -> intermediate -> token_out)
+        // Common intermediates: WETH, USDC, USDT, WBTC
+        let intermediates: Vec<Address> = pools
+            .iter()
+            .flat_map(|p| vec![p.token0, p.token1])
+            .filter(|&t| t != token_in && t != token_out)
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+
+        for intermediate in intermediates {
+            // Find pool for first hop: token_in -> intermediate
+            let first_hop_pool = pools.iter().find(|p| {
+                (p.token0 == token_in && p.token1 == intermediate)
+                    || (p.token1 == token_in && p.token0 == intermediate)
+            });
+
+            // Find pool for second hop: intermediate -> token_out
+            let second_hop_pool = pools.iter().find(|p| {
+                (p.token0 == intermediate && p.token1 == token_out)
+                    || (p.token1 == intermediate && p.token0 == token_out)
+            });
+
+            if let (Some(pool1), Some(pool2)) = (first_hop_pool, second_hop_pool) {
+                // Calculate first hop
+                let is_token0_in_hop1 = pool1.token0 == token_in;
+                if let Ok(quote1) = self.get_quote(pool1, amount_in, is_token0_in_hop1).await {
+                    // Use output of first hop as input for second hop
+                    let is_token0_in_hop2 = pool2.token0 == intermediate;
+                    if let Ok(quote2) = self.get_quote(pool2, quote1.amount_out, is_token0_in_hop2).await {
+                        // Combined price impact (additive for simplicity)
+                        let combined_impact = quote1.price_impact_bps + quote2.price_impact_bps;
+                        let total_out = quote2.amount_out;
+
+                        let route = SwapRoute {
+                            hops: vec![quote1, quote2],
+                            total_amount_out: total_out,
+                            total_price_impact_bps: combined_impact,
+                        };
+
+                        // Compare with current best (considering price impact)
+                        if best_route.as_ref().map_or(true, |r| {
+                            route.total_amount_out > r.total_amount_out
+                        }) {
+                            best_route = Some(route);
+                        }
+                    }
+                }
+            }
+        }
 
         Ok(best_route)
     }
