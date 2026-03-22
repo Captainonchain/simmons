@@ -1,0 +1,72 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/simmons-core",
+    "crates/simmons-feeds",
+    "crates/simmons-alpha",
+    "crates/simmons-brain",
+    "crates/simmons-risk",
+    "crates/simmons-exec",
+    "crates/simmons-infra",
+    "crates/simmons-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Simmons Trading"]
+license = "MIT"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# WebSocket
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+futures-util = "0.3"
+
+# HTTP
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Math/Stats
+rust_decimal = { version = "1.33", features = ["serde", "serde-with-str"] }
+rust_decimal_macros = "1.33"
+
+# Utilities
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"
+anyhow = "1"
+dashmap = "5"
+crossbeam = "0.8"
+parking_lot = "0.12"
+uuid = { version = "1", features = ["v4"] }
+rand = "0.8"
+
+# Streams
+tokio-stream = "0.1"
+
+# Ethereum/EVM
+ethers = { version = "2.0", features = ["abigen", "ws", "rustls"] }
+alloy-primitives = "0.7"
+alloy-sol-types = "0.7"
+
+# Internal crates
+simmons-core = { path = "crates/simmons-core" }
+simmons-feeds = { path = "crates/simmons-feeds" }
+simmons-alpha = { path = "crates/simmons-alpha" }
+simmons-brain = { path = "crates/simmons-brain" }
+simmons-risk = { path = "crates/simmons-risk" }
+simmons-exec = { path = "crates/simmons-exec" }
+simmons-infra = { path = "crates/simmons-infra" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

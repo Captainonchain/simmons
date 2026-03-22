@@ -1,0 +1,21 @@
+# Build
+/target/
+Cargo.lock
+
+# Data files (runtime generated)
+data/signals.json
+data/decision.json
+data/state.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

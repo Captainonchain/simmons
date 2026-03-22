@@ -1,0 +1,33 @@
+[package]
+name = "simmons-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "simmons"
+path = "src/main.rs"
+
+[dependencies]
+simmons-core = { workspace = true }
+simmons-feeds = { workspace = true }
+simmons-alpha = { workspace = true }
+simmons-brain = { workspace = true }
+simmons-risk = { workspace = true }
+simmons-exec = { workspace = true }
+simmons-infra = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+
+# Web server
+axum = { version = "0.7", features = ["ws"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+futures = "0.3"

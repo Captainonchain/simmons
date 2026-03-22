@@ -1,0 +1,38 @@
+# Simmons Configuration
+
+mode = "paper"
+capital_usd = 100
+symbols = ["BTC-USDT", "ETH-USDT", "SOL-USDT"]
+
+[risk]
+max_position_pct = 0.15
+max_drawdown = 0.20
+kelly_fraction = 0.25
+daily_loss_limit = 50
+default_stop_loss_pct = 0.03
+default_take_profit_pct = 0.08
+max_positions = 5
+
+[feeds]
+okx_ws_url = "wss://ws.okx.com:8443/ws/v5/public"
+price_window_size = 100
+update_interval_ms = 100
+
+[alpha]
+momentum_lookback = 14
+rsi_period = 14
+rsi_overbought = 70
+rsi_oversold = 30
+zscore_threshold = 2
+min_confidence = 0.60
+
+[execution]
+max_slippage_bps = 50
+split_threshold_usd = 1000
+mev_protection = true
+preferred_venues = ["okx"]
+
+[brain]
+data_dir = "data"
+timeout_secs = 60
+auto_invoke = false

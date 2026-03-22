@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simmons - Trading Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --purple: #a371f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Portfolio Card */
+        .portfolio-card {
+            grid-column: span 4;
+        }
+
+        .equity {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .pnl {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .pnl.positive { color: var(--green); }
+        .pnl.negative { color: var(--red); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .stat {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Markets Card */
+        .markets-card {
+            grid-column: span 8;
+        }
+
+        .market-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .market-table th,
+        .market-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .market-table th {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .symbol-name {
+            font-weight: 600;
+        }
+
+        .regime-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .regime-trendingup { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+        .regime-trendingdown { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+        .regime-meanreverting { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
+        .regime-highvolatility { background: rgba(210, 153, 34, 0.2); color: var(--yellow); }
+        .regime-choppy { background: rgba(139, 148, 158, 0.2); color: var(--text-secondary); }
+
+        /* Signals Card */
+        .signals-card {
+            grid-column: span 6;
+        }
+
+        .signal-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .signal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .signal-item:last-child {
+            border-bottom: none;
+        }
+
+        .signal-info {
+            flex: 1;
+        }
+
+        .signal-strategy {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .signal-reason {
+            font-size: 13px;
+        }
+
+        .signal-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .signal-buy, .signal-strongbuy { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+        .signal-sell, .signal-strongsell { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+        .signal-hold { background: rgba(139, 148, 158, 0.2); color: var(--text-secondary); }
+
+        /* Decision Card */
+        .decision-card {
+            grid-column: span 6;
+        }
+
+        .decision-panel {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .decision-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .decision-action {
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .decision-action.trade { color: var(--green); }
+        .decision-action.skip { color: var(--text-secondary); }
+        .decision-action.close { color: var(--red); }
+
+        .decision-confidence {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .decision-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .decision-detail {
+            text-align: center;
+        }
+
+        .decision-detail-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .decision-detail-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .decision-reasoning {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .no-decision {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .no-decision h3 {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        /* Positions Card */
+        .positions-card {
+            grid-column: span 12;
+        }
+
+        .positions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .positions-table th,
+        .positions-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .positions-table th {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .side-long { color: var(--green); }
+        .side-short { color: var(--red); }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        /* Quick Actions */
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: #79b8ff;
+        }
+
+        .btn-success {
+            background: var(--green);
+            color: var(--bg-primary);
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: var(--bg-primary);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 16px 24px;
+            border-radius: 8px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .grid > * {
+                grid-column: span 12 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <h1>SIMMONS</h1>
+            <span>Max ROI Trading</span>
+        </div>
+        <div class="status">
+            <div class="status-dot" id="connectionStatus"></div>
+            <span id="connectionText">Connecting...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="grid">
+            <!-- Portfolio Card -->
+            <div class="card portfolio-card">
+                <div class="card-header">
+                    <span class="card-title">Portfolio</span>
+                </div>
+                <div class="equity" id="equity">$0.00</div>
+                <div class="pnl positive" id="pnl">+$0.00 (+0.0%)</div>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value" id="winRate">0%</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Drawdown</div>
+                        <div class="stat-value" id="drawdown">0%</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Total Trades</div>
+                        <div class="stat-value" id="totalTrades">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Capital</div>
+                        <div class="stat-value" id="capital">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Markets Card -->
+            <div class="card markets-card">
+                <div class="card-header">
+                    <span class="card-title">Markets</span>
+                </div>
+                <table class="market-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Price</th>
+                            <th>Spread</th>
+                            <th>Regime</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marketsBody">
+                        <tr>
+                            <td colspan="4" class="empty-state">Loading markets...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Signals Card -->
+            <div class="card signals-card">
+                <div class="card-header">
+                    <span class="card-title">Live Signals</span>
+                </div>
+                <div class="signal-list" id="signalsList">
+                    <div class="empty-state">Waiting for signals...</div>
+                </div>
+            </div>
+
+            <!-- Decision Card -->
+            <div class="card decision-card">
+                <div class="card-header">
+                    <span class="card-title">Claude Brain Decision</span>
+                </div>
+                <div id="decisionPanel">
+                    <div class="no-decision">
+                        <h3>No Active Decision</h3>
+                        <p>Run <code>/simmons-brain</code> in Claude Code to generate a trading decision</p>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-success" onclick="quickTrade('long')">Quick Long</button>
+                    <button class="btn btn-danger" onclick="quickTrade('short')">Quick Short</button>
+                    <button class="btn btn-secondary" onclick="skipTrade()">Skip</button>
+                </div>
+            </div>
+
+            <!-- Positions Card -->
+            <div class="card positions-card">
+                <div class="card-header">
+                    <span class="card-title">Open Positions</span>
+                </div>
+                <table class="positions-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Size</th>
+                            <th>Entry</th>
+                            <th>Current</th>
+                            <th>P&L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positionsBody">
+                        <tr>
+                            <td colspan="6" class="empty-state">No open positions</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let ws;
+        let reconnectAttempts = 0;
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+            ws.onopen = () => {
+                document.getElementById('connectionStatus').style.background = '#3fb950';
+                document.getElementById('connectionText').textContent = 'Connected';
+                reconnectAttempts = 0;
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connectionStatus').style.background = '#f85149';
+                document.getElementById('connectionText').textContent = 'Disconnected';
+                setTimeout(() => {
+                    reconnectAttempts++;
+                    connect();
+                }, Math.min(1000 * reconnectAttempts, 10000));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateDashboard(data);
+            };
+        }
+
+        function updateDashboard(data) {
+            // Update portfolio
+            document.getElementById('equity').textContent = `$${data.portfolio.equity}`;
+            document.getElementById('capital').textContent = `$${data.portfolio.capital}`;
+            document.getElementById('winRate').textContent = data.portfolio.win_rate;
+            document.getElementById('drawdown').textContent = data.portfolio.drawdown;
+            document.getElementById('totalTrades').textContent = data.portfolio.total_trades;
+
+            const pnlEl = document.getElementById('pnl');
+            pnlEl.textContent = `${data.portfolio.pnl} (${data.portfolio.pnl_pct})`;
+            pnlEl.className = 'pnl ' + (data.portfolio.pnl.startsWith('+') || data.portfolio.pnl === '0.00' ? 'positive' : 'negative');
+
+            // Update markets
+            const marketsBody = document.getElementById('marketsBody');
+            if (data.symbols.length > 0) {
+                marketsBody.innerHTML = data.symbols.map(s => `
+                    <tr>
+                        <td class="symbol-name">${s.symbol}</td>
+                        <td>$${s.price}</td>
+                        <td>${s.spread_bps} bps</td>
+                        <td><span class="regime-badge regime-${s.regime.toLowerCase().replace(/[^a-z]/g, '')}">${s.regime}</span></td>
+                    </tr>
+                `).join('');
+            }
+
+            // Update signals
+            const signalsList = document.getElementById('signalsList');
+            if (data.signals.length > 0) {
+                signalsList.innerHTML = data.signals.map(s => `
+                    <div class="signal-item">
+                        <div class="signal-info">
+                            <div class="signal-strategy">${s.symbol} · ${s.strategy}</div>
+                            <div class="signal-reason">${s.reason}</div>
+                        </div>
+                        <span class="signal-badge signal-${s.signal.toLowerCase()}">${s.signal} ${s.confidence}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Update decision
+            const decisionPanel = document.getElementById('decisionPanel');
+            if (data.decision) {
+                decisionPanel.innerHTML = `
+                    <div class="decision-panel">
+                        <div class="decision-header">
+                            <span class="decision-action ${data.decision.action.toLowerCase()}">${data.decision.action}</span>
+                            <span class="decision-confidence">${data.decision.confidence}</span>
+                        </div>
+                        <div class="decision-details">
+                            <div class="decision-detail">
+                                <div class="decision-detail-label">Symbol</div>
+                                <div class="decision-detail-value">${data.decision.symbol || '-'}</div>
+                            </div>
+                            <div class="decision-detail">
+                                <div class="decision-detail-label">Side</div>
+                                <div class="decision-detail-value">${data.decision.side || '-'}</div>
+                            </div>
+                            <div class="decision-detail">
+                                <div class="decision-detail-label">Size</div>
+                                <div class="decision-detail-value">${data.decision.size_pct || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="decision-reasoning">${data.decision.reasoning}</div>
+                    </div>
+                `;
+            }
+
+            // Update positions
+            const positionsBody = document.getElementById('positionsBody');
+            if (data.portfolio.positions.length > 0) {
+                positionsBody.innerHTML = data.portfolio.positions.map(p => `
+                    <tr>
+                        <td class="symbol-name">${p.symbol}</td>
+                        <td class="side-${p.side.toLowerCase()}">${p.side}</td>
+                        <td>${p.size}</td>
+                        <td>$${p.entry}</td>
+                        <td>$${p.current}</td>
+                        <td class="${p.pnl.startsWith('+') ? 'pnl positive' : 'pnl negative'}">${p.pnl} (${p.pnl_pct})</td>
+                    </tr>
+                `).join('');
+            } else {
+                positionsBody.innerHTML = '<tr><td colspan="6" class="empty-state">No open positions</td></tr>';
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.borderLeftColor = type === 'success' ? '#3fb950' : type === 'error' ? '#f85149' : '#58a6ff';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        async function quickTrade(side) {
+            try {
+                const response = await fetch('/api/decide', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'trade',
+                        symbol: 'BTC-USDT',
+                        side: side,
+                        size_pct: 0.1,
+                        reasoning: `Quick ${side} from dashboard`
+                    })
+                });
+                if (response.ok) {
+                    showToast(`${side.toUpperCase()} order submitted`, 'success');
+                } else {
+                    showToast('Failed to submit order', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        }
+
+        async function skipTrade() {
+            try {
+                const response = await fetch('/api/decide', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'skip',
+                        reasoning: 'Skipped from dashboard'
+                    })
+                });
+                if (response.ok) {
+                    showToast('Trade skipped', 'info');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        }
+
+        // Connect on load
+        connect();
+    </script>
+</body>
+</html>

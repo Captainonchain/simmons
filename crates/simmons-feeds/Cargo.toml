@@ -1,0 +1,26 @@
+[package]
+name = "simmons-feeds"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+simmons-core = { workspace = true }
+tokio = { workspace = true }
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+dashmap = { workspace = true }
+crossbeam = { workspace = true }
+parking_lot = { workspace = true }
+shellexpand = "3"
+
+[dev-dependencies]
+rust_decimal_macros = { workspace = true }
