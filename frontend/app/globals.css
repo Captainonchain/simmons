@@ -1,0 +1,57 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+@theme {
+  /* Bloomberg palette */
+  --color-bb-black: #000000;
+  --color-bb-panel: #0a0a0a;
+  --color-bb-surface: #111111;
+  --color-bb-raised: #1a1a1a;
+  --color-bb-border: #222222;
+  --color-bb-border-light: #333333;
+
+  /* Bloomberg accent colors */
+  --color-bb-orange: #FF6600;
+  --color-bb-amber: #FF9900;
+  --color-bb-green: #00CC66;
+  --color-bb-red: #FF3333;
+  --color-bb-blue: #3399FF;
+  --color-bb-cyan: #00CCCC;
+  --color-bb-yellow: #FFCC00;
+  --color-bb-magenta: #CC66FF;
+  --color-bb-white: #CCCCCC;
+  --color-bb-bright: #FFFFFF;
+  --color-bb-dim: #666666;
+  --color-bb-muted: #444444;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+  background: var(--color-bb-black);
+  color: var(--color-bb-white);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Bloomberg-style scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--color-bb-black); }
+::-webkit-scrollbar-thumb { background: var(--color-bb-border-light); }
+
+/* Pulse for live indicators */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.blink { animation: blink 1s step-end infinite; }
+
+@keyframes slideUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up { animation: slideUp 0.2s ease-out; }

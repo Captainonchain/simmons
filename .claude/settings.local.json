@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(rm -rf frontend)",
+      "Bash(mkdir frontend:*)",
+      "Bash(cd:*)",
+      "Bash(npx --yes create-next-app@latest . --ts --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --use-npm --turbopack)",
+      "Bash(npm install:*)",
+      "Bash(npx next:*)",
+      "Bash(cargo check:*)",
+      "Bash(where.exe cargo:*)",
+      "Bash(npm run:*)",
+      "Bash(npm ls:*)",
+      "WebFetch(domain:heroui.com)",
+      "Bash(npm view:*)",
+      "Bash(curl -s http://localhost:3001)",
+      "Bash(npx heroui-inc/heroui)",
+      "Bash(npx skills:*)",
+      "Bash(claude mcp:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(node .agents/skills/heroui-react/scripts/get_docs.mjs /docs/react/getting-started/theming)",
+      "Bash(node .agents/skills/heroui-react/scripts/get_theme.mjs)",
+      "Bash(node .agents/skills/heroui-react/scripts/list_components.mjs)",
+      "Bash(node .agents/skills/heroui-react/scripts/get_component_docs.mjs Surface Card Tabs)",
+      "Bash(node .agents/skills/heroui-react/scripts/get_component_docs.mjs Card)",
+      "Bash(curl:*)",
+      "WebFetch(domain:benji.org)",
+      "Bash(grep -l '\"\"bg-bb-surface border border-bb-border\"\"' components/*.tsx)",
+      "Bash(node -e \"const rgl = require\\(''react-grid-layout''\\); console.log\\(Object.keys\\(rgl\\)\\)\")"
+    ]
+  }
+}

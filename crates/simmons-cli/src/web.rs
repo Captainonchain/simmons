@@ -7,7 +7,7 @@ use axum::{
         Path, State,
     },
     http::StatusCode,
-    response::{Html, IntoResponse, Json},
+    response::{IntoResponse, Json},
     routing::{get, post},
     Router,
 };
@@ -24,6 +24,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 use tracing::{error, info};
 
 // ============================================================================
@@ -408,7 +409,6 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
 
     // Build router
     let app = Router::new()
-        .route("/", get(index_handler))
         .route("/api/status", get(full_status_handler))
         .route("/api/feeds/prices", get(prices_handler))
         .route("/api/ai/signals", get(signals_handler))
@@ -418,6 +418,9 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         .route("/api/brain/decide", post(decide_handler))
         .route("/api/brain/state", get(brain_state_handler))
         .route("/ws", get(ws_handler))
+        .fallback_service(
+            ServeDir::new("frontend/out").append_index_html_on_directories(true),
+        )
         .layer(CorsLayer::permissive())
         .with_state(state);
 
@@ -656,10 +659,6 @@ async fn build_full_update(state: &AppState) -> Option<DashboardUpdate> {
 // ============================================================================
 // Route Handlers
 // ============================================================================
-
-async fn index_handler() -> Html<&'static str> {
-    Html(include_str!("../../../frontend/index.html"))
-}
 
 async fn full_status_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match build_full_update(&state).await {
