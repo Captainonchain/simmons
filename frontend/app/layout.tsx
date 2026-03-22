@@ -5,7 +5,10 @@ export const metadata: Metadata = {
   title: "SIMMONS — Autonomous AI Trading on X Layer",
   description: "Autonomous AI Trading on X Layer",
   icons: {
-    icon: "/logo1.png",
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo1.png", sizes: "192x192", type: "image/png" },
+    ],
     apple: "/logo1.png",
   },
 };
