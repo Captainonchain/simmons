@@ -14,18 +14,38 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 
 /// Bridge contract addresses
+/// Supports override via environment variables
 pub mod contracts {
     use ethers::types::Address;
     use std::str::FromStr;
+    use std::sync::OnceLock;
+
+    static L1_BRIDGE: OnceLock<Address> = OnceLock::new();
+    static L2_BRIDGE: OnceLock<Address> = OnceLock::new();
+
+    fn parse_address(addr: &str, name: &str) -> Address {
+        Address::from_str(addr)
+            .unwrap_or_else(|_| panic!("Invalid {} address - build error", name))
+    }
 
     /// L1 (Ethereum) bridge contract
     pub fn l1_bridge() -> Address {
-        Address::from_str("0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe").unwrap()
+        *L1_BRIDGE.get_or_init(|| {
+            std::env::var("BRIDGE_L1_ADDRESS")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe", "L1 Bridge"))
+        })
     }
 
     /// L2 (X Layer) bridge contract
     pub fn l2_bridge() -> Address {
-        Address::from_str("0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe").unwrap()
+        *L2_BRIDGE.get_or_init(|| {
+            std::env::var("BRIDGE_L2_ADDRESS")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe", "L2 Bridge"))
+        })
     }
 
     /// Native ETH on L1 representation

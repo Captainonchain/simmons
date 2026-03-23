@@ -23,9 +23,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
+use tokio::signal;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 // ============================================================================
 // App State
@@ -395,14 +396,23 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         });
     }
 
-    // Spawn update broadcaster
+    // Spawn update broadcaster with graceful shutdown
     let state_clone = state.clone();
-    tokio::spawn(async move {
+    let update_handle = tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_millis(500));
         loop {
-            interval.tick().await;
-            if let Some(update) = build_full_update(&state_clone).await {
-                let _ = state_clone.tx.send(update);
+            tokio::select! {
+                _ = interval.tick() => {
+                    if let Some(update) = build_full_update(&state_clone).await {
+                        if state_clone.tx.send(update).is_err() {
+                            // No subscribers, continue anyway
+                        }
+                    }
+                }
+                _ = signal::ctrl_c() => {
+                    info!("Shutting down update broadcaster...");
+                    break;
+                }
             }
         }
     });
@@ -428,9 +438,43 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
     info!("Starting Simmons Dashboard at http://localhost:{}", port);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+
+    // Serve with graceful shutdown
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+
+    // Cleanup background tasks
+    update_handle.abort();
+    info!("Dashboard shutdown complete");
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    info!("Received shutdown signal");
 }
 
 // ============================================================================

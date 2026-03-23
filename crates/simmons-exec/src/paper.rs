@@ -41,12 +41,21 @@ impl PaperTrader {
 
     /// Execute order in paper trading mode
     pub fn execute(&self, order: &Order, market_price: Decimal) -> Result<ExecutionResult, String> {
-        // Calculate fill price with slippage
-        let slippage_mult = match order.side {
-            Side::Long => dec!(1) + self.slippage_bps / dec!(10000),
-            Side::Short => dec!(1) - self.slippage_bps / dec!(10000),
+        // Calculate fill price - only apply slippage to market orders
+        let fill_price = match order.order_type {
+            simmons_core::OrderType::Limit => {
+                // Limit orders fill at limit price or better (no slippage)
+                order.limit_price.unwrap_or(market_price)
+            }
+            simmons_core::OrderType::Market => {
+                // Market orders get slippage
+                let slippage_mult = match order.side {
+                    Side::Long => dec!(1) + self.slippage_bps / dec!(10000),
+                    Side::Short => dec!(1) - self.slippage_bps / dec!(10000),
+                };
+                market_price * slippage_mult
+            }
         };
-        let fill_price = market_price * slippage_mult;
 
         // Calculate fee
         let fee = order.size * fill_price * self.fee_bps / dec!(10000);

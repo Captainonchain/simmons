@@ -144,7 +144,9 @@ impl OkxFeed {
                         timestamp: data.ts.parse().unwrap_or(0),
                         source: Source::Okx,
                     };
-                    let _ = tick_tx.send(tick);
+                    if tick_tx.send(tick).is_err() {
+                        warn!("Failed to broadcast tick - no subscribers");
+                    }
                 }
             }
         }
@@ -181,7 +183,9 @@ impl OkxFeed {
                         asks,
                         timestamp: data.ts.parse().unwrap_or(0),
                     };
-                    let _ = book_tx.send(book);
+                    if book_tx.send(book).is_err() {
+                        warn!("Failed to broadcast order book - no subscribers");
+                    }
                 }
             }
         }

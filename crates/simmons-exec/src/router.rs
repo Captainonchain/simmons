@@ -208,11 +208,15 @@ impl SmartOrderRouter {
             .take(self.config.max_split_venues)
             .enumerate()
         {
-            // Calculate how much to fill at this venue
-            let venue_capacity = quote.available_liquidity / quote.price;
+            // Calculate how much to fill at this venue (with zero guards)
+            let venue_capacity = if quote.price.is_zero() {
+                Decimal::ZERO
+            } else {
+                quote.available_liquidity / quote.price
+            };
             let fill_size = remaining.min(venue_capacity);
 
-            if fill_size > Decimal::ZERO {
+            if fill_size > Decimal::ZERO && !order.size.is_zero() {
                 let weight = fill_size / order.size;
                 total_cost_bps += quote.total_cost_bps() * weight;
                 max_latency = max_latency.max(quote.latency_ms);
@@ -253,9 +257,27 @@ impl SmartOrderRouter {
     /// Estimate execution cost
     pub fn estimate_cost(&self, order: &Order) -> ExecutionCostEstimate {
         let routed = self.route(order);
-        let order_value = order.size * order.limit_price.unwrap_or(Decimal::ZERO);
 
-        let fee_cost = order_value * routed.total_cost_bps / dec!(10000);
+        // For market orders, use expected price from routing; for limit orders, use limit price
+        let avg_expected_price = if routed.routes.is_empty() {
+            order.limit_price.unwrap_or(Decimal::ZERO)
+        } else {
+            let total_size: Decimal = routed.routes.iter().map(|r| r.size).sum();
+            if total_size.is_zero() {
+                order.limit_price.unwrap_or(Decimal::ZERO)
+            } else {
+                routed.routes.iter()
+                    .map(|r| r.expected_price * r.size)
+                    .sum::<Decimal>() / total_size
+            }
+        };
+        let order_value = order.size * order.limit_price.unwrap_or(avg_expected_price);
+
+        let fee_cost = if order_value.is_zero() {
+            Decimal::ZERO
+        } else {
+            order_value * routed.total_cost_bps / dec!(10000)
+        };
 
         ExecutionCostEstimate {
             order_value,

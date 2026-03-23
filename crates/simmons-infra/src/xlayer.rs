@@ -19,24 +19,56 @@ pub const XLAYER_MAINNET_RPC: &str = "https://rpc.xlayer.tech";
 pub const XLAYER_TESTNET_RPC: &str = "https://testrpc.xlayer.tech";
 
 /// Common token addresses on X Layer
+/// Supports override via environment variables for different networks
 pub mod tokens {
     use ethers::types::Address;
     use std::str::FromStr;
+    use std::sync::OnceLock;
+
+    static WETH: OnceLock<Address> = OnceLock::new();
+    static USDT: OnceLock<Address> = OnceLock::new();
+    static USDC: OnceLock<Address> = OnceLock::new();
+    static OKB: OnceLock<Address> = OnceLock::new();
+
+    fn parse_address(addr: &str, name: &str) -> Address {
+        Address::from_str(addr)
+            .unwrap_or_else(|_| panic!("Invalid {} address - build error", name))
+    }
 
     pub fn weth() -> Address {
-        Address::from_str("0x5A77f1443D16ee5761d310e38b62f77f726bC71c").unwrap()
+        *WETH.get_or_init(|| {
+            std::env::var("XLAYER_WETH")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x5A77f1443D16ee5761d310e38b62f77f726bC71c", "WETH"))
+        })
     }
 
     pub fn usdt() -> Address {
-        Address::from_str("0x1E4a5963aBFD975d8c9021ce480b42188849D41d").unwrap()
+        *USDT.get_or_init(|| {
+            std::env::var("XLAYER_USDT")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x1E4a5963aBFD975d8c9021ce480b42188849D41d", "USDT"))
+        })
     }
 
     pub fn usdc() -> Address {
-        Address::from_str("0x74b7F16337b8972027F6196A17a631aC6dE26d22").unwrap()
+        *USDC.get_or_init(|| {
+            std::env::var("XLAYER_USDC")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x74b7F16337b8972027F6196A17a631aC6dE26d22", "USDC"))
+        })
     }
 
     pub fn okb() -> Address {
-        Address::from_str("0x75231F58b43240C9718Dd58B4967c5114342a86c").unwrap()
+        *OKB.get_or_init(|| {
+            std::env::var("XLAYER_OKB")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x75231F58b43240C9718Dd58B4967c5114342a86c", "OKB"))
+        })
     }
 }
 
