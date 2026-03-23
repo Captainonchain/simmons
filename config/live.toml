@@ -1,0 +1,55 @@
+# Simmons Live Trading Configuration
+#
+# IMPORTANT: Set these environment variables before running:
+#   export OKX_API_KEY="your-api-key"
+#   export OKX_API_SECRET="your-api-secret"
+#   export OKX_PASSPHRASE="your-passphrase"
+#   export XLAYER_PRIVATE_KEY="0x..."
+#
+# For testnet, also set:
+#   export XLAYER_TESTNET=true
+#   export OKX_SIMULATED=true
+
+mode = "live"
+capital_usd = 1000
+
+# Start with fewer, more liquid pairs for live trading
+symbols = [
+    "BTC-USDT",
+    "ETH-USDT",
+    "SOL-USDT",
+]
+
+[risk]
+# More conservative settings for live trading
+max_position_pct = 0.10      # 10% max per position
+max_drawdown = 0.15          # 15% max drawdown (stop all trading)
+kelly_fraction = 0.15        # 15% Kelly (conservative)
+daily_loss_limit = 100       # $100 daily loss limit
+default_stop_loss_pct = 0.02 # 2% stop loss
+default_take_profit_pct = 0.05 # 5% take profit
+max_positions = 3            # Max 3 concurrent positions
+
+[feeds]
+okx_ws_url = "wss://ws.okx.com:8443/ws/v5/public"
+price_window_size = 100
+update_interval_ms = 500     # Slower updates for live (less CPU)
+
+[alpha]
+momentum_lookback = 14
+rsi_period = 14
+rsi_overbought = 70
+rsi_oversold = 30
+zscore_threshold = 2
+min_confidence = 0.70        # Higher confidence threshold for live
+
+[execution]
+max_slippage_bps = 30        # Tighter slippage for live
+split_threshold_usd = 5000   # Split larger orders
+mev_protection = true
+preferred_venues = ["okx", "xlayer_dex"]
+
+[brain]
+data_dir = "data"
+timeout_secs = 30            # Shorter timeout for live decisions
+auto_invoke = true           # Enable autonomous decisions

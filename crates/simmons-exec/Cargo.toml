@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 simmons-core = { workspace = true }
 simmons-risk = { workspace = true }
+simmons-feeds = { workspace = true }
 tokio = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
@@ -17,3 +18,12 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 parking_lot = { workspace = true }
+uuid = { workspace = true }
+
+# Ethereum/signing
+ethers = { workspace = true }
+
+# Crypto for OKX API signing
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"

@@ -63,7 +63,7 @@ enum Commands {
     /// Start web dashboard
     Dashboard {
         /// Port to run on
-        #[arg(short, long, default_value = "3456")]
+        #[arg(short, long, default_value = "3000")]
         port: u16,
     },
 }
@@ -124,8 +124,8 @@ async fn main() -> Result<()> {
         }
         None => {
             // Default: start dashboard
-            info!("Starting dashboard on http://localhost:3456");
-            web::start_server(config, 3456).await?;
+            info!("Starting dashboard on http://localhost:3000");
+            web::start_server(config, 3000).await?;
         }
     }
 

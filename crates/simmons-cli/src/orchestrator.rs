@@ -35,7 +35,33 @@ impl Engine {
     pub async fn new(config: Config) -> Result<Self> {
         let portfolio = Arc::new(Portfolio::new(config.capital_usd));
         let risk = RiskGovernor::new(portfolio.clone(), config.risk.clone());
-        let exec = ExecutionEngine::new(config.mode, config.execution.clone(), portfolio.clone());
+
+        // Initialize execution engine
+        let mut exec = ExecutionEngine::new(config.mode, config.execution.clone(), portfolio.clone());
+
+        // For live mode, initialize live executor
+        if config.mode == simmons_core::TradingMode::Live {
+            let use_testnet = std::env::var("XLAYER_TESTNET")
+                .map(|v| v == "true" || v == "1")
+                .unwrap_or(false);
+
+            match exec.with_live_executor(use_testnet) {
+                Ok(e) => {
+                    exec = e;
+                    info!("Live execution initialized (testnet={})", use_testnet);
+                }
+                Err(e) => {
+                    warn!("Live executor initialization failed: {}", e);
+                    warn!("Falling back to paper trading mode");
+                    // Fall back to paper mode
+                    exec = ExecutionEngine::new(
+                        simmons_core::TradingMode::Paper,
+                        config.execution.clone(),
+                        portfolio.clone(),
+                    );
+                }
+            }
+        }
 
         let brain = BrainBridge::new(
             &config.brain.data_dir,
