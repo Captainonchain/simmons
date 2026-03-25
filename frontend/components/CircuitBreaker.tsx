@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 interface CircuitBreakerProps {
   triggered?: boolean;
   reason?: string | null;
@@ -8,12 +10,11 @@ interface CircuitBreakerProps {
   maxDrawdownLimit?: number;
   consecutiveLosses?: number;
   maxConsecutiveLosses?: number;
-  positionSizeModifier?: number;
+  positionLimitUsed?: number;
   canTrade?: boolean;
-  recommendations?: string[];
 }
 
-export function CircuitBreaker({
+export const CircuitBreaker = memo(function CircuitBreaker({
   triggered = false,
   reason = null,
   riskLevel = "normal",
@@ -21,134 +22,118 @@ export function CircuitBreaker({
   maxDrawdownLimit = 0.2,
   consecutiveLosses = 0,
   maxConsecutiveLosses = 3,
-  positionSizeModifier = 1,
+  positionLimitUsed = 0,
   canTrade = true,
-  recommendations = [],
 }: CircuitBreakerProps) {
-  const getRiskColor = () => {
-    switch (riskLevel) {
-      case "critical": return "text-bb-red";
-      case "elevated": return "text-bb-amber";
-      default: return "text-bb-green";
-    }
-  };
-
-  const getRiskBg = () => {
-    switch (riskLevel) {
-      case "critical": return "bg-bb-red/10 border-bb-red/30";
-      case "elevated": return "bg-bb-amber/10 border-bb-amber/30";
-      default: return "bg-bb-green/10 border-bb-green/30";
-    }
-  };
-
   const drawdownPct = currentDrawdown * 100;
-  const drawdownLimitPct = maxDrawdownLimit * 100;
-  const drawdownRatio = Math.min(1, currentDrawdown / maxDrawdownLimit);
+  const limitPct = maxDrawdownLimit * 100;
+  const posLimitPct = positionLimitUsed * 100;
+
+  const getRiskStyle = () => {
+    switch (riskLevel) {
+      case "critical":
+        return { color: "text-bb-red", bg: "bg-bb-red/10", border: "border-bb-red/30" };
+      case "elevated":
+        return { color: "text-bb-amber", bg: "bg-bb-amber/10", border: "border-bb-amber/30" };
+      default:
+        return { color: "text-bb-green", bg: "bg-bb-green/10", border: "border-bb-green/30" };
+    }
+  };
+
+  const style = getRiskStyle();
 
   return (
-    <div className="bg-bb-surface border border-bb-border h-full flex flex-col">
-      <div className="bg-bb-panel px-2 py-1 border-b border-bb-border flex items-center justify-between">
-        <span className="text-[10px] text-bb-orange font-semibold tracking-wider">CIRCUIT BREAKER</span>
+    <div className="grid-cell h-full">
+      <div className="grid-cell-header">
+        <div className="flex items-center gap-2">
+          <span className="grid-cell-title">CIRCUIT BREAKER</span>
+        </div>
         <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${triggered ? "bg-bb-red blink" : "bg-bb-green"}`} />
-          <span className={`text-[9px] ${triggered ? "text-bb-red" : "text-bb-green"}`}>
-            {triggered ? "TRIGGERED" : "ACTIVE"}
+          <span
+            className={`w-2 h-2 rounded-full ${
+              triggered ? "bg-bb-red blink" : canTrade ? "bg-bb-green" : "bg-bb-amber"
+            }`}
+          />
+          <span className={`text-[9px] font-bold ${triggered ? "text-bb-red" : canTrade ? "text-bb-green" : "text-bb-amber"}`}>
+            {triggered ? "HALTED" : canTrade ? "ACTIVE" : "LIMITED"}
           </span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 text-[10px]">
+      <div className="grid-cell-body space-y-2">
         {/* Risk Level Badge */}
-        <div className={`border p-2 ${getRiskBg()}`}>
+        <div className={`p-2 border ${style.bg} ${style.border}`}>
           <div className="flex items-center justify-between">
-            <span className="text-bb-dim">Risk Level</span>
-            <span className={`font-bold uppercase ${getRiskColor()}`}>
+            <span className="text-[8px] text-bb-dim">RISK LEVEL</span>
+            <span className={`text-[10px] font-bold uppercase ${style.color}`}>
               {riskLevel}
             </span>
-          </div>
-          <div className="flex items-center justify-between mt-1 text-[9px]">
-            <span className="text-bb-dim">Position Modifier</span>
-            <span className="text-bb-white">{(positionSizeModifier * 100).toFixed(0)}%</span>
           </div>
         </div>
 
         {/* Triggered Reason */}
         {triggered && reason && (
-          <div className="bg-bb-red/10 border border-bb-red/50 p-2">
-            <div className="text-bb-red font-bold text-[9px] uppercase mb-1">TRADING HALTED</div>
-            <div className="text-bb-white">{reason}</div>
+          <div className="p-2 bg-bb-red/10 border border-bb-red/50">
+            <div className="text-bb-red text-[8px] font-bold uppercase mb-0.5">HALTED</div>
+            <div className="text-bb-white text-[9px]">{reason}</div>
           </div>
         )}
 
-        {/* Drawdown Meter */}
-        <div className="bg-bb-raised border border-bb-border p-2">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-bb-dim">Drawdown</span>
-            <span className={drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-green"}>
-              {drawdownPct.toFixed(1)}% / {drawdownLimitPct}%
-            </span>
-          </div>
-          <div className="h-2 bg-bb-border">
-            <div
-              className={`h-full transition-all ${
-                drawdownPct > 15 ? "bg-bb-red" : drawdownPct > 10 ? "bg-bb-amber" : "bg-bb-green"
-              }`}
-              style={{ width: `${drawdownRatio * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Consecutive Losses */}
-        <div className="bg-bb-raised border border-bb-border p-2">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-bb-dim">Consecutive Losses</span>
-            <span className={consecutiveLosses >= 2 ? "text-bb-red" : "text-bb-white"}>
-              {consecutiveLosses} / {maxConsecutiveLosses}
-            </span>
-          </div>
-          <div className="flex gap-1">
-            {Array.from({ length: maxConsecutiveLosses }).map((_, i) => (
+        {/* Metrics */}
+        <div className="space-y-1.5">
+          {/* Drawdown */}
+          <div>
+            <div className="flex items-center justify-between text-[8px] mb-0.5">
+              <span className="text-bb-dim">DRAWDOWN</span>
+              <span className={drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-dim"}>
+                {drawdownPct.toFixed(1)}% / {limitPct.toFixed(0)}%
+              </span>
+            </div>
+            <div className="h-1.5 bg-bb-border">
               <div
-                key={i}
-                className={`flex-1 h-2 ${
-                  i < consecutiveLosses ? "bg-bb-red" : "bg-bb-border"
+                className={`h-full transition-all ${
+                  drawdownPct > 15 ? "bg-bb-red" : drawdownPct > 10 ? "bg-bb-amber" : "bg-bb-green"
                 }`}
+                style={{ width: `${Math.min(100, (drawdownPct / limitPct) * 100)}%` }}
               />
-            ))}
+            </div>
           </div>
-        </div>
 
-        {/* Trading Status */}
-        <div className={`p-2 border ${canTrade ? "bg-bb-green/10 border-bb-green/30" : "bg-bb-red/10 border-bb-red/30"}`}>
-          <div className="flex items-center gap-2">
-            <span className={`text-lg ${canTrade ? "text-bb-green" : "text-bb-red"}`}>
-              {canTrade ? "✓" : "✗"}
-            </span>
-            <div>
-              <div className={`font-bold ${canTrade ? "text-bb-green" : "text-bb-red"}`}>
-                {canTrade ? "TRADING ENABLED" : "TRADING BLOCKED"}
-              </div>
-              <div className="text-bb-dim text-[9px]">
-                {canTrade
-                  ? `Position size at ${(positionSizeModifier * 100).toFixed(0)}%`
-                  : "Wait for risk to normalize"}
-              </div>
+          {/* Consecutive Losses */}
+          <div>
+            <div className="flex items-center justify-between text-[8px] mb-0.5">
+              <span className="text-bb-dim">CONSECUTIVE LOSSES</span>
+              <span className={consecutiveLosses >= 2 ? "text-bb-red" : "text-bb-dim"}>
+                {consecutiveLosses} / {maxConsecutiveLosses}
+              </span>
+            </div>
+            <div className="flex gap-0.5">
+              {Array.from({ length: maxConsecutiveLosses }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`flex-1 h-1.5 ${i < consecutiveLosses ? "bg-bb-red" : "bg-bb-border"}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Position Limit */}
+          <div>
+            <div className="flex items-center justify-between text-[8px] mb-0.5">
+              <span className="text-bb-dim">POSITION LIMIT</span>
+              <span className={posLimitPct > 80 ? "text-bb-amber" : "text-bb-dim"}>
+                {posLimitPct.toFixed(0)}%
+              </span>
+            </div>
+            <div className="h-1.5 bg-bb-border">
+              <div
+                className={`h-full transition-all ${posLimitPct > 80 ? "bg-bb-amber" : "bg-bb-cyan"}`}
+                style={{ width: `${Math.min(100, posLimitPct)}%` }}
+              />
             </div>
           </div>
         </div>
-
-        {/* Recommendations */}
-        {recommendations.length > 0 && (
-          <div className="space-y-1">
-            <div className="text-bb-dim text-[9px] uppercase tracking-wider">Recommendations</div>
-            {recommendations.map((rec, i) => (
-              <div key={i} className="bg-bb-raised border border-bb-border p-1.5 text-[9px]">
-                <span className="text-bb-cyan">→</span> {rec}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
-}
+});

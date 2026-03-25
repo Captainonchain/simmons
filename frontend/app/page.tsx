@@ -1,196 +1,117 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useWebSocket } from "@/hooks/useWebSocket";
+
+// Core panels
 import { Header } from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
-import { StatsRow } from "@/components/StatsRow";
+import { StatsBar } from "@/components/StatsBar";
 import { PriceChart } from "@/components/PriceChart";
-import { MarketsTable } from "@/components/MarketsTable";
-import { SignalsList } from "@/components/SignalsList";
-import { NunchiAggregator } from "@/components/NunchiAggregator";
-import { ClaudeBrain } from "@/components/ClaudeBrain";
-import { RiskMetrics } from "@/components/RiskMetrics";
-import { KellyCriterion } from "@/components/KellyCriterion";
-import { MevShield } from "@/components/MevShield";
-import { XLayerInfra } from "@/components/XLayerInfra";
-import { FeedbackLoop } from "@/components/FeedbackLoop";
-import { Headlines } from "@/components/Headlines";
-import { PortfolioGrowth } from "@/components/PortfolioGrowth";
-import { DashboardGrid } from "@/components/DashboardGrid";
 import { AgentDebate } from "@/components/AgentDebate";
-import { MemoryInsights } from "@/components/MemoryInsights";
 import { CircuitBreaker } from "@/components/CircuitBreaker";
 import { TradeHistory } from "@/components/TradeHistory";
+import { MemoryInsights } from "@/components/MemoryInsights";
+import { PortfolioChart } from "@/components/PortfolioChart";
+import { QuickTrade } from "@/components/QuickTrade";
 
 export default function Dashboard() {
   const { data, isConnected } = useWebSocket();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
   const handleToast = useCallback((message: string, type: "success" | "error" | "info") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 2500);
+    setTimeout(() => setToast(null), 2000);
   }, []);
 
-  const l = data?.layers;
+  // Keyboard shortcut hints
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        handleToast("L=Long S=Short Esc=Cancel", "info");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleToast]);
 
-  const panels: Record<string, React.ReactNode> = {
-    stats: <StatsRow data={data} />,
-    chart: (
-      <PriceChart
-        priceHistory={l?.data_ingestion.price_history ?? {}}
-        availableSymbols={l?.data_ingestion.symbols.map((s) => s.symbol) ?? []}
-      />
-    ),
-    markets: (
-      <MarketsTable
-        symbols={l?.data_ingestion.symbols ?? []}
-        regime={l?.ai_intelligence.regime.current ?? "Loading"}
-      />
-    ),
-    signals: <SignalsList signals={l?.ai_intelligence.strategy_signals ?? []} />,
-    portfolio: <PortfolioGrowth portfolio={l?.decision_risk.portfolio ?? null} />,
-    brain: <ClaudeBrain onToast={handleToast} />,
-    nunchi: <NunchiAggregator nunchi={l?.ai_intelligence.nunchi_score ?? null} />,
-    risk: <RiskMetrics risk={l?.decision_risk.risk_metrics ?? null} portfolio={l?.decision_risk.portfolio ?? null} />,
-    kelly: <KellyCriterion kelly={l?.decision_risk.kelly_sizing ?? null} equity={l?.decision_risk.portfolio.equity ?? 100} />,
-    mev: <MevShield mev={l?.execution.mev_shield ?? null} />,
-    infra: <XLayerInfra infra={l?.infrastructure ?? null} />,
-    feedback: <FeedbackLoop feedback={l?.feedback ?? null} />,
-    headlines: <Headlines />,
-    // New v2.0 components
-    agentDebate: (
-      <AgentDebate
-        bullConviction={0.77}
-        bearConviction={0.58}
-        finalDecision="BUY"
-        agentVotes={[
-          { agent: "Technical", recommendation: "BUY", confidence: 0.72, reason: "MACD crossover, RSI oversold" },
-          { agent: "Fundamental", recommendation: "HOLD", confidence: 0.68, reason: "Fair valuation" },
-          { agent: "Sentiment", recommendation: "BUY", confidence: 0.72, reason: "Smart money accumulating" },
-          { agent: "On-chain", recommendation: "BUY", confidence: 0.88, reason: "No security concerns" },
-          { agent: "Bull Researcher", recommendation: "LONG", confidence: 0.77, reason: "Multi-factor convergence" },
-          { agent: "Bear Researcher", recommendation: "CAUTION", confidence: 0.58, reason: "MACD not confirmed" },
-          { agent: "Neutral Risk", recommendation: "12%", confidence: 0.72, reason: "Balanced position" },
-        ]}
-      />
-    ),
-    memory: (
-      <MemoryInsights
-        totalLearnings={12}
-        totalReflections={5}
-        agentStats={{
-          technical_analyst: { total_predictions: 10, correct_predictions: 7, accuracy: 0.7 },
-          sentiment_analyst: { total_predictions: 10, correct_predictions: 8, accuracy: 0.8 },
-          onchain_analyst: { total_predictions: 8, correct_predictions: 7, accuracy: 0.875 },
-        }}
-        recentLessons={[
-          "RSI below 30 with volume spike leads to reversal",
-          "Smart money accumulation confirms technical signals",
-          "Reduce size when MACD not confirmed",
-        ]}
-        winningPatterns={[
-          "Oversold RSI + smart money buying",
-          "Volume spike at support level",
-        ]}
-        avoidPatterns={[
-          "Trading against whale distribution",
-          "Entering during choppy regime",
-        ]}
-      />
-    ),
-    circuitBreaker: (
-      <CircuitBreaker
-        triggered={false}
-        riskLevel="normal"
-        currentDrawdown={0.03}
-        maxDrawdownLimit={0.20}
-        consecutiveLosses={0}
-        maxConsecutiveLosses={3}
-        positionSizeModifier={1.0}
-        canTrade={true}
-        recommendations={["Normal trading permitted"]}
-      />
-    ),
-    tradeHistory: (
-      <TradeHistory
-        trades={[
-          {
-            id: "trade_001",
-            symbol: "BTC-USDT",
-            side: "long",
-            entryPrice: 67250,
-            exitPrice: undefined,
-            outcome: "open",
-            openedAt: new Date().toISOString(),
-            reasoning: "Multi-agent consensus: 3/4 analysts BUY",
-            agentVotes: [
-              { agent: "Technical", recommendation: "BUY", confidence: 0.72 },
-              { agent: "Sentiment", recommendation: "BUY", confidence: 0.72 },
-              { agent: "On-chain", recommendation: "BUY", confidence: 0.88 },
-            ],
-          },
-        ]}
-      />
-    ),
-  };
+  const l = data?.layers;
+  const portfolio = l?.decision_risk.portfolio;
+  const regime = l?.ai_intelligence.regime;
+  const kelly = l?.decision_risk.kelly_sizing;
+  const risk = l?.decision_risk.risk_metrics;
 
   return (
     <div className="h-screen flex flex-col bg-bb-black overflow-hidden">
-      <Header
-        isConnected={isConnected}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+      {/* Header */}
+      <Header isConnected={isConnected} />
+
+      {/* Stats Bar */}
+      <StatsBar
+        equity={portfolio?.equity ?? 1000}
+        pnl={portfolio?.pnl ?? 0}
+        pnlPct={portfolio?.pnl_pct ?? 0}
+        winRate={portfolio?.win_rate ?? 0}
+        totalTrades={portfolio?.total_trades ?? 0}
+        regime={regime?.current ?? "loading"}
+        volatility={regime?.volatility ?? 0}
+        kellySizePct={kelly?.recommended_size_pct ?? 10}
+        drawdown={portfolio?.drawdown ?? 0}
+        maxDrawdown={portfolio?.max_drawdown ?? 0.2}
       />
 
-      {/* Edit mode toggle bar */}
-      <div className="bg-bb-panel border-b border-bb-border h-6 px-3 flex items-center justify-between text-[9px] shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="text-bb-dim">LAYOUT</span>
-          <button
-            onClick={() => setEditMode(!editMode)}
-            className={`px-2 py-0.5 font-bold transition-colors ${
-              editMode
-                ? "bg-bb-orange text-bb-black"
-                : "bg-bb-raised text-bb-dim hover:text-bb-white border border-bb-border"
-            }`}
-          >
-            {editMode ? "● EDITING" : "CUSTOMIZE"}
-          </button>
-          {editMode && (
-            <span className="text-bb-amber">DRAG HEADERS TO MOVE · CORNERS TO RESIZE</span>
-          )}
+      {/* Main Grid - 12 column layout */}
+      <div className="flex-1 min-h-0 p-0.5 grid grid-cols-12 grid-rows-[1fr_1fr] gap-0.5">
+
+        {/* Row 1: Chart | Agent Debate | Circuit + Trade */}
+        <div className="col-span-4 row-span-1">
+          <PriceChart
+            priceHistory={l?.data_ingestion.price_history ?? {}}
+            availableSymbols={l?.data_ingestion.symbols.map((s) => s.symbol) ?? []}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          {editMode && (
-            <button
-              onClick={() => setEditMode(false)}
-              className="px-2 py-0.5 bg-bb-green text-bb-black font-bold"
-            >
-              DONE
-            </button>
-          )}
+
+        <div className="col-span-5 row-span-1">
+          <AgentDebate />
+        </div>
+
+        <div className="col-span-3 row-span-1 grid grid-rows-2 gap-0.5">
+          <CircuitBreaker
+            triggered={false}
+            riskLevel="normal"
+            currentDrawdown={portfolio?.drawdown ?? 0}
+            maxDrawdownLimit={portfolio?.max_drawdown ?? 0.2}
+            consecutiveLosses={0}
+            maxConsecutiveLosses={3}
+            positionLimitUsed={risk?.position_limit_used ?? 0}
+            canTrade={true}
+          />
+          <QuickTrade onToast={handleToast} />
+        </div>
+
+        {/* Row 2: Portfolio | Trade History | Memory */}
+        <div className="col-span-4 row-span-1">
+          <PortfolioChart portfolio={portfolio ?? null} />
+        </div>
+
+        <div className="col-span-5 row-span-1">
+          <TradeHistory />
+        </div>
+
+        <div className="col-span-3 row-span-1">
+          <MemoryInsights />
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0">
-        <Sidebar dataIngestion={l?.data_ingestion} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-        <main className="flex-1 overflow-y-auto">
-          <DashboardGrid editMode={editMode}>
-            {panels}
-          </DashboardGrid>
-        </main>
-      </div>
-
-      {/* Toast */}
+      {/* Toast notifications */}
       {toast && (
         <div
-          className="fixed bottom-3 right-3 bg-bb-surface border border-bb-border px-3 py-2 z-50 animate-slide-up text-[10px]"
-          style={{ borderLeft: `2px solid ${toast.type === "success" ? "#00CC66" : toast.type === "error" ? "#FF3333" : "#FF6600"}` }}
+          className="fixed bottom-2 right-2 px-3 py-1.5 text-[10px] font-medium slide-in z-50"
+          style={{
+            background: toast.type === "success" ? "#00DD55" : toast.type === "error" ? "#FF2222" : "#FFAA00",
+            color: "#000",
+          }}
         >
-          <span className="text-bb-white">{toast.message}</span>
+          {toast.message}
         </div>
       )}
     </div>
