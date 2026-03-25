@@ -1,60 +1,69 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { ResponsiveGridLayout, type Layout, type Layouts } from "react-grid-layout";
+import { useState, useCallback, useRef, useEffect, memo } from "react";
+import { ResponsiveGridLayout, verticalCompactor, type Layout, type ResponsiveLayouts } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 
-const STORAGE_KEY = "simmons-grid-layouts";
+const STORAGE_KEY = "simmons-grid-v3";
 
-const DEFAULT_LAYOUTS: Layouts = {
+// Layout reflects Dual Brain v3.0 architecture flow:
+// Stats → Chart + Markets + TA Brain (side) → Fund Brain (side)
+// → Consensus → Orchestrator → Execution
+// → Portfolio + Risk/Kelly → Signals + Feedback
+const DEFAULT_LAYOUTS: ResponsiveLayouts = {
   xl: [
-    { i: "stats",     x: 0, y: 0,  w: 12, h: 2,  isResizable: false },
-    { i: "chart",     x: 0, y: 2,  w: 4,  h: 7 },
-    { i: "markets",   x: 4, y: 2,  w: 4,  h: 7 },
-    { i: "signals",   x: 8, y: 2,  w: 4,  h: 7 },
-    { i: "portfolio", x: 0, y: 9,  w: 8,  h: 6 },
-    { i: "brain",     x: 8, y: 9,  w: 4,  h: 6 },
-    { i: "nunchi",    x: 0, y: 15, w: 3,  h: 6 },
-    { i: "risk",      x: 3, y: 15, w: 3,  h: 6 },
-    { i: "kelly",     x: 6, y: 15, w: 3,  h: 6 },
-    { i: "mev",       x: 9, y: 15, w: 3,  h: 6 },
-    { i: "infra",     x: 0, y: 21, w: 4,  h: 4 },
-    { i: "feedback",  x: 4, y: 21, w: 4,  h: 4 },
-    { i: "headlines", x: 8, y: 21, w: 4,  h: 6 },
+    // Row 0: Stats overview
+    { i: "stats",        x: 0,  y: 0,  w: 12, h: 2,  isResizable: false },
+    // Row 1: Data layer — Chart, Markets, TA Brain
+    { i: "chart",        x: 0,  y: 2,  w: 4,  h: 8 },
+    { i: "markets",      x: 4,  y: 2,  w: 4,  h: 8 },
+    { i: "ta-brain",     x: 8,  y: 2,  w: 4,  h: 12 },
+    // Row 2: Dual Brain — Fund Brain + Consensus + Orchestrator
+    { i: "fund-brain",   x: 0,  y: 10, w: 4,  h: 12 },
+    { i: "consensus",    x: 4,  y: 10, w: 4,  h: 8 },
+    { i: "orchestrator", x: 4,  y: 18, w: 4,  h: 10 },
+    { i: "execution",    x: 8,  y: 14, w: 4,  h: 8 },
+    // Row 3: Portfolio + Risk
+    { i: "portfolio",    x: 0,  y: 22, w: 6,  h: 6 },
+    { i: "risk",         x: 6,  y: 22, w: 3,  h: 6 },
+    { i: "kelly",        x: 9,  y: 22, w: 3,  h: 6 },
+    // Row 4: Signals + Feedback
+    { i: "signals",      x: 0,  y: 28, w: 6,  h: 6 },
+    { i: "feedback",     x: 6,  y: 28, w: 6,  h: 4 },
   ],
   md: [
-    { i: "stats",     x: 0, y: 0,  w: 6, h: 2,  isResizable: false },
-    { i: "chart",     x: 0, y: 2,  w: 3, h: 7 },
-    { i: "markets",   x: 3, y: 2,  w: 3, h: 7 },
-    { i: "signals",   x: 0, y: 9,  w: 6, h: 5 },
-    { i: "portfolio", x: 0, y: 14, w: 6, h: 6 },
-    { i: "brain",     x: 0, y: 20, w: 3, h: 5 },
-    { i: "nunchi",    x: 3, y: 20, w: 3, h: 5 },
-    { i: "risk",      x: 0, y: 25, w: 3, h: 6 },
-    { i: "kelly",     x: 3, y: 25, w: 3, h: 6 },
-    { i: "mev",       x: 0, y: 31, w: 3, h: 4 },
-    { i: "infra",     x: 3, y: 31, w: 3, h: 4 },
-    { i: "feedback",  x: 0, y: 35, w: 3, h: 4 },
-    { i: "headlines", x: 3, y: 35, w: 3, h: 6 },
+    { i: "stats",        x: 0, y: 0,  w: 6, h: 2,  isResizable: false },
+    { i: "chart",        x: 0, y: 2,  w: 3, h: 7 },
+    { i: "markets",      x: 3, y: 2,  w: 3, h: 7 },
+    { i: "ta-brain",     x: 0, y: 9,  w: 3, h: 12 },
+    { i: "fund-brain",   x: 3, y: 9,  w: 3, h: 12 },
+    { i: "consensus",    x: 0, y: 21, w: 3, h: 8 },
+    { i: "orchestrator", x: 3, y: 21, w: 3, h: 10 },
+    { i: "execution",    x: 0, y: 29, w: 3, h: 8 },
+    { i: "portfolio",    x: 3, y: 31, w: 3, h: 6 },
+    { i: "risk",         x: 0, y: 37, w: 3, h: 6 },
+    { i: "kelly",        x: 3, y: 37, w: 3, h: 6 },
+    { i: "signals",      x: 0, y: 43, w: 6, h: 6 },
+    { i: "feedback",     x: 0, y: 49, w: 6, h: 4 },
   ],
   sm: [
-    { i: "stats",     x: 0, y: 0,  w: 2, h: 4,  isResizable: false },
-    { i: "chart",     x: 0, y: 4,  w: 2, h: 7 },
-    { i: "portfolio", x: 0, y: 11, w: 2, h: 6 },
-    { i: "markets",   x: 0, y: 17, w: 2, h: 7 },
-    { i: "signals",   x: 0, y: 24, w: 2, h: 6 },
-    { i: "brain",     x: 0, y: 30, w: 2, h: 5 },
-    { i: "nunchi",    x: 0, y: 35, w: 1, h: 6 },
-    { i: "risk",      x: 1, y: 35, w: 1, h: 6 },
-    { i: "kelly",     x: 0, y: 41, w: 1, h: 5 },
-    { i: "mev",       x: 1, y: 41, w: 1, h: 4 },
-    { i: "infra",     x: 0, y: 46, w: 2, h: 3 },
-    { i: "feedback",  x: 0, y: 49, w: 2, h: 4 },
-    { i: "headlines", x: 0, y: 53, w: 2, h: 6 },
+    { i: "stats",        x: 0, y: 0,  w: 2, h: 5,  isResizable: false },
+    { i: "chart",        x: 0, y: 5,  w: 2, h: 7 },
+    { i: "ta-brain",     x: 0, y: 12, w: 2, h: 12 },
+    { i: "fund-brain",   x: 0, y: 24, w: 2, h: 12 },
+    { i: "consensus",    x: 0, y: 36, w: 2, h: 8 },
+    { i: "orchestrator", x: 0, y: 44, w: 2, h: 10 },
+    { i: "execution",    x: 0, y: 54, w: 2, h: 8 },
+    { i: "portfolio",    x: 0, y: 62, w: 2, h: 6 },
+    { i: "markets",      x: 0, y: 68, w: 2, h: 7 },
+    { i: "risk",         x: 0, y: 75, w: 2, h: 5 },
+    { i: "kelly",        x: 0, y: 80, w: 2, h: 5 },
+    { i: "signals",      x: 0, y: 85, w: 2, h: 6 },
+    { i: "feedback",     x: 0, y: 91, w: 2, h: 4 },
   ],
 };
 
-function loadLayouts(): Layouts | null {
+function loadLayouts(): ResponsiveLayouts | null {
   if (typeof window === "undefined") return null;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -64,7 +73,7 @@ function loadLayouts(): Layouts | null {
   }
 }
 
-function saveLayouts(layouts: Layouts) {
+function saveLayouts(layouts: ResponsiveLayouts) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layouts));
   } catch {}
@@ -75,10 +84,10 @@ interface DashboardGridProps {
   editMode: boolean;
 }
 
-export function DashboardGrid({ children, editMode }: DashboardGridProps) {
+export const DashboardGrid = memo(function DashboardGrid({ children, editMode }: DashboardGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const [layouts, setLayouts] = useState<Layouts>(() => loadLayouts() ?? DEFAULT_LAYOUTS);
+  const [layouts, setLayouts] = useState<ResponsiveLayouts>(() => loadLayouts() ?? DEFAULT_LAYOUTS);
 
   // Measure container width on mount + resize
   useEffect(() => {
@@ -93,7 +102,7 @@ export function DashboardGrid({ children, editMode }: DashboardGridProps) {
     return () => ro.disconnect();
   }, []);
 
-  const handleLayoutChange = useCallback((_: Layout[], allLayouts: Layouts) => {
+  const handleLayoutChange = useCallback((_layout: Layout, allLayouts: ResponsiveLayouts) => {
     setLayouts(allLayouts);
     saveLayouts(allLayouts);
   }, []);
@@ -122,14 +131,12 @@ export function DashboardGrid({ children, editMode }: DashboardGridProps) {
           breakpoints={{ xl: 1280, md: 768, sm: 0 }}
           cols={{ xl: 12, md: 6, sm: 2 }}
           rowHeight={35}
-          margin={[1, 1]}
-          containerPadding={[1, 1]}
-          isDraggable={editMode}
-          isResizable={editMode}
-          draggableHandle=".grid-drag-handle"
+          margin={[3, 3]}
+          containerPadding={[3, 3]}
+          dragConfig={{ enabled: editMode, handle: ".grid-drag-handle", bounded: false, threshold: 3 }}
+          resizeConfig={{ enabled: editMode, handles: ["se"] }}
           onLayoutChange={handleLayoutChange}
-          compactType="vertical"
-          useCSSTransforms
+          compactor={verticalCompactor}
         >
           {panelKeys.map((key) => (
             <div key={key} className="overflow-hidden">
@@ -154,4 +161,4 @@ export function DashboardGrid({ children, editMode }: DashboardGridProps) {
       )}
     </div>
   );
-}
+});

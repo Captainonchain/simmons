@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { ResponsiveContainer, AreaChart, Area, YAxis, XAxis, Tooltip, CartesianGrid } from "recharts";
 import type { PricePoint } from "@/lib/types";
 
@@ -12,7 +12,7 @@ interface PriceChartProps {
 export const PriceChart = memo(function PriceChart({ priceHistory, availableSymbols }: PriceChartProps) {
   const [sym, setSym] = useState("BTC-USDT");
   const history = priceHistory[sym] ?? [];
-  const chartData = history.map((p, i) => ({ idx: i, price: p.price }));
+  const chartData = useMemo(() => history.map((p, i) => ({ idx: i, price: p.price })), [history]);
   const symbols = availableSymbols.length > 0 ? availableSymbols : ["BTC-USDT", "ETH-USDT"];
 
   return (
@@ -45,7 +45,7 @@ export const PriceChart = memo(function PriceChart({ priceHistory, availableSymb
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="1 4" stroke="#222" vertical={false} />
-              <YAxis domain={["auto", "auto"]} orientation="right" tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} width={55} />
+              <YAxis domain={["auto", "auto"]} orientation="right" tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} width={45} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v.toFixed(0)} />
               <Tooltip
                 contentStyle={{ background: "#111", border: "1px solid #333", fontSize: 10, fontFamily: "JetBrains Mono", color: "#ccc" }}
                 formatter={(v: number) => [`$${v.toFixed(2)}`, ""]}

@@ -26,7 +26,7 @@ export const Header = memo(function Header({ isConnected, onToggleSidebar }: Hea
     <header className="bg-bb-panel border-b border-bb-border h-11 px-2 sm:px-3 flex items-center justify-between text-[10px] sm:text-[11px] select-none shrink-0">
       <div className="flex items-center min-w-0">
         {/* Mobile menu toggle */}
-        <button onClick={onToggleSidebar} className="lg:hidden text-bb-orange px-1 mr-2">≡</button>
+        <button onClick={onToggleSidebar} className="lg:hidden text-bb-orange px-2 py-1 -ml-1 mr-1 text-[16px] active:opacity-70">≡</button>
         <div className="flex items-center gap-2 shrink-0 mr-3">
           <img src="/logo1.png" alt="Simmons" className="h-8 w-8 rounded" />
           <span className="text-bb-orange font-bold tracking-wider text-[13px]">SIMMONS</span>

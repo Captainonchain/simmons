@@ -13,7 +13,7 @@ export const StatsRow = memo(function StatsRow({ data }: { data: DashboardUpdate
   const pnl = p?.pnl ?? 0;
 
   return (
-    <div className="grid grid-cols-3 md:grid-cols-6 gap-px h-full">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px h-full">
       <StatCard label="EQUITY" value={`$${(p?.equity ?? 100).toFixed(2)}`} change={`${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)} (${(p?.pnl_pct ?? 0).toFixed(1)}%)`} changeUp={pnl >= 0} />
       <StatCard label="WIN RATE" value={`${(p?.win_rate ?? 0).toFixed(0)}%`} change={`${p?.total_trades ?? 0} TRADES`} />
       <StatCard label="NUNCHI" value={(n?.score ?? 0.65).toFixed(2)} change={n?.direction?.toUpperCase() ?? "BULLISH"} />

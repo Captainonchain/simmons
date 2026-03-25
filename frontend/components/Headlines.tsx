@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
+import { memo, useState } from "react";
 
 interface Headline {
   time: string;
@@ -37,12 +37,6 @@ const sIcon: Record<string, string> = { positive: "▲", negative: "▼", neutra
 
 export const Headlines = memo(function Headlines() {
   const [headlines] = useState<Headline[]>(PLACEHOLDER_HEADLINES);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   return (
     <div className="bg-bb-surface border border-bb-border h-full flex flex-col">
@@ -50,16 +44,16 @@ export const Headlines = memo(function Headlines() {
         <div className="flex items-center gap-2">
           <span className="text-bb-amber font-bold text-[10px]">HEADLINES</span>
         </div>
-        <span className={`text-bb-orange text-[9px] ${tick % 2 === 0 ? "opacity-100" : "opacity-30"}`}>● LIVE</span>
+        <span className="text-bb-orange text-[9px] blink">● LIVE</span>
       </div>
       <div className="overflow-y-auto flex-1 min-h-0">
         {headlines.map((h, i) => (
-          <div key={i} className={`px-2 py-1 border-b border-bb-border last:border-b-0 hover:bg-bb-raised cursor-pointer text-[10px] ${i === 0 ? "bg-bb-raised" : ""}`}>
-            <div className="flex items-start gap-1 sm:gap-1.5">
+          <div key={i} className={`px-1.5 sm:px-2 py-1 border-b border-bb-border last:border-b-0 hover:bg-bb-raised cursor-pointer text-[10px] ${i === 0 ? "bg-bb-raised" : ""}`}>
+            <div className="flex items-start gap-1 sm:gap-1.5 min-w-0">
               <span className="text-bb-dim shrink-0 w-[30px] sm:w-[34px]">{h.time}</span>
               <span className={`shrink-0 ${sColor[h.sentiment]}`}>{sIcon[h.sentiment]}</span>
-              <span className="text-bb-cyan shrink-0 w-[40px] sm:w-[52px] font-bold truncate">{h.source}</span>
-              <span className="text-bb-white truncate sm:whitespace-normal">{h.text}</span>
+              <span className="text-bb-cyan shrink-0 w-[36px] sm:w-[48px] font-bold truncate">{h.source}</span>
+              <span className="text-bb-white min-w-0 truncate">{h.text}</span>
             </div>
           </div>
         ))}

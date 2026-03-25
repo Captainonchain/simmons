@@ -5,7 +5,7 @@ import type { MevShieldData } from "@/lib/types";
 
 export const MevShield = memo(function MevShield({ mev }: { mev: MevShieldData | null }) {
   return (
-    <div className="bg-bb-surface border border-bb-border h-full">
+    <div className="bg-bb-surface border border-bb-border h-full flex flex-col overflow-hidden">
       <div className="px-2 py-1 border-b border-bb-border">
         <span className="text-bb-amber font-bold text-[10px]">MEV SHIELD</span>
       </div>

@@ -44,7 +44,7 @@ export const Sidebar = memo(function Sidebar({ dataIngestion, open, onClose }: S
       `}>
         <div className="px-2 pt-2 pb-1 text-bb-orange font-bold tracking-widest border-b border-bb-border flex items-center justify-between">
           <span>SYSTEMS</span>
-          <button onClick={onClose} className="lg:hidden text-bb-dim">✕</button>
+          <button onClick={onClose} className="lg:hidden text-bb-dim px-1 py-0.5 active:opacity-70">✕</button>
         </div>
         {layers.map((layer) => (
           <div key={layer.title} className="border-b border-bb-border">

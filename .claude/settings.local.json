@@ -29,7 +29,9 @@
       "WebFetch(domain:benji.org)",
       "Bash(grep -l '\"\"bg-bb-surface border border-bb-border\"\"' components/*.tsx)",
       "Bash(node -e \"const rgl = require\\(''react-grid-layout''\\); console.log\\(Object.keys\\(rgl\\)\\)\")",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(wc:*)",
+      "Bash(ls C:/Users/0xSimba/Desktop/simmons/frontend/node_modules/react-grid-layout/lib/*.d.ts)"
     ]
   }
 }

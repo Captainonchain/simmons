@@ -28,24 +28,24 @@ export const ClaudeBrain = memo(function ClaudeBrain({ onToast }: ClaudeBrainPro
         <div className="text-bb-dim text-[10px] mb-1">AWAITING DECISION</div>
         <div className="text-bb-muted text-[9px]">ANALYZING SIGNALS...</div>
       </div>
-      <div className="flex border-t border-bb-border">
+      <div className="grid grid-cols-3 border-t border-bb-border mt-auto">
         <button
           onClick={() => handleTrade("long")}
           disabled={loading === "long"}
-          className="flex-1 py-1.5 text-[10px] font-bold text-bb-black bg-bb-green hover:brightness-110 disabled:opacity-50 transition-all"
+          className="py-2 text-[10px] font-bold text-bb-black bg-bb-green hover:brightness-110 disabled:opacity-50 transition-all"
         >
           {loading === "long" ? "..." : "LONG"}
         </button>
         <button
           onClick={() => handleTrade("short")}
           disabled={loading === "short"}
-          className="flex-1 py-1.5 text-[10px] font-bold text-bb-bright bg-bb-red hover:brightness-110 disabled:opacity-50 border-x border-bb-border transition-all"
+          className="py-2 text-[10px] font-bold text-bb-bright bg-bb-red hover:brightness-110 disabled:opacity-50 border-l border-r border-bb-border transition-all"
         >
           {loading === "short" ? "..." : "SHORT"}
         </button>
         <button
           onClick={() => onToast("SKIPPED", "info")}
-          className="flex-1 py-1.5 text-[10px] font-bold text-bb-dim bg-bb-raised hover:bg-bb-border-light transition-all"
+          className="py-2 text-[10px] font-bold text-bb-dim bg-bb-raised hover:bg-bb-border-light transition-all"
         >
           SKIP
         </button>

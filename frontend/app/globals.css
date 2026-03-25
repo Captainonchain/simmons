@@ -1,7 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "@heroui/styles";
-
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @theme {
   /* Bloomberg palette */
@@ -42,6 +41,14 @@ body {
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: var(--color-bb-black); }
 ::-webkit-scrollbar-thumb { background: var(--color-bb-border-light); }
+
+/* Touch-friendly scrolling */
+@media (pointer: coarse) {
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+}
+
+/* Prevent text selection on drag handles */
+.grid-drag-handle { user-select: none; -webkit-user-select: none; touch-action: none; }
 
 /* Pulse for live indicators */
 @keyframes blink {

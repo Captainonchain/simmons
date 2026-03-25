@@ -9,7 +9,7 @@ export const KellyCriterion = memo(function KellyCriterion({ kelly, equity }: { 
   const recUsd = equity * recPct / 100;
 
   return (
-    <div className="bg-bb-surface border border-bb-border h-full">
+    <div className="bg-bb-surface border border-bb-border h-full flex flex-col overflow-hidden">
       <div className="px-2 py-1 border-b border-bb-border">
         <span className="text-bb-amber font-bold text-[10px]">KELLY CRITERION</span>
       </div>

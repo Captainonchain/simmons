@@ -38,15 +38,15 @@ export const PortfolioGrowth = memo(function PortfolioGrowth({ portfolio }: Port
 
   return (
     <div className="bg-bb-surface border border-bb-border h-full flex flex-col">
-      <div className="px-2 py-1 border-b border-bb-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-bb-amber font-bold text-[10px]">PORTFOLIO</span>
-          <span className="text-bb-dim text-[9px]">EQUITY CURVE</span>
+      <div className="px-2 py-1 border-b border-bb-border flex items-center justify-between min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-bb-amber font-bold text-[10px] shrink-0">PORTFOLIO</span>
+          <span className="text-bb-dim text-[9px] hidden sm:inline">EQUITY CURVE</span>
         </div>
-        <div className="flex items-center gap-3 text-[10px]">
+        <div className="flex items-center gap-1.5 sm:gap-3 text-[10px] shrink-0">
           <span className="text-bb-bright font-bold">${equity.toFixed(2)}</span>
           <span className={isUp ? "text-bb-green" : "text-bb-red"}>
-            {isUp ? "▲" : "▼"} {isUp ? "+" : ""}{pnl.toFixed(2)} ({pnlPct.toFixed(2)}%)
+            {isUp ? "▲" : "▼"} {pnlPct.toFixed(2)}%
           </span>
         </div>
       </div>
@@ -58,7 +58,7 @@ export const PortfolioGrowth = memo(function PortfolioGrowth({ portfolio }: Port
           momentum={true}
           showValue={false}
           exaggerate={true}
-          referenceLine={{ value: data[0]?.value ?? equity, color: "#444", label: "START" }}
+          referenceLine={{ value: data[0]?.value ?? equity, color: "#444", label: "START" } as never}
         />
       </div>
     </div>

@@ -269,3 +269,100 @@ export interface FeedbackData {
   strategy_adjustments: Record<string, number>;
   pattern_effectiveness: Record<string, number>;
 }
+
+// ===== SIMMONS DUAL BRAIN v3.0 =====
+
+// TA Brain (Nunchi 14 Strats)
+export interface TABrainData {
+  radar_score: number; // 0-200
+  pulse_tier: number; // 0-6
+  guard: GuardData;
+  apex: ApexData;
+  strategies: StrategyCategories;
+}
+
+export interface GuardData {
+  phase: number; // 1 or 2
+  active_stops: number;
+  triggered: boolean;
+}
+
+export interface ApexData {
+  concurrent_slots: number; // max 4
+  active_slots: number;
+  priority_tier: string;
+  roe_exit_active: boolean;
+}
+
+export interface StrategyCategories {
+  mm: StrategyStatus[]; // engine, avellaneda, regime, grid, liq
+  arb: StrategyStatus[]; // funding, basis
+  dir: StrategyStatus[]; // momentum, mean_rev
+  int: StrategyStatus[]; // hedge, rfe, claude
+}
+
+export interface StrategyStatus {
+  name: string;
+  active: boolean;
+  signal: string; // buy | sell | hold | skip
+  confidence: number;
+}
+
+// Fundamental Brain (Multi-Source)
+export interface FundBrainData {
+  whale_sentiment: number; // -1 to 1
+  twitter_sentiment: number; // -1 to 1
+  news_sentiment: number; // -1 to 1
+  security_flags: string[];
+  whale_tracker: WhaleTrackerData;
+  news_headlines: NewsHeadline[];
+  trending_tokens: string[];
+}
+
+export interface WhaleTrackerData {
+  smart_money_signals: number;
+  kol_tracking: boolean;
+  recent_moves: string[];
+}
+
+export interface NewsHeadline {
+  source: string;
+  text: string;
+  sentiment: "positive" | "negative" | "neutral";
+  time: string;
+}
+
+// Consensus Layer
+export interface ConsensusData {
+  merged_score: number; // combined TA + Fund score
+  ta_weight: number; // 0.6
+  fund_weight: number; // 0.4
+  radar_met: boolean; // RADAR > 170
+  fund_positive: boolean;
+  entry_approved: boolean;
+  conflict: boolean; // triggers Claude debate
+  reflect_adjustments: Record<string, number>;
+}
+
+// Claude Orchestrator
+export interface OrchestratorData {
+  debate: DebateData;
+  selected_strategy: string; // MM | ARB | Directional
+  guard_synced: boolean;
+  action: string; // long | short | skip
+}
+
+export interface DebateData {
+  bull_thesis: string;
+  bear_thesis: string;
+  risk_assessment: string;
+  verdict: string;
+}
+
+// Execution Status
+export interface ExecutionModeData {
+  mode: string; // paper | live_dex | live_perps
+  paper: { active: boolean; engine: string };
+  live_dex: { active: boolean; chains: string[]; router: string };
+  live_perps: { active: boolean; venue: string };
+}

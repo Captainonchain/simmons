@@ -17,13 +17,13 @@ export const XLayerInfra = memo(function XLayerInfra({ infra }: { infra: Infrast
   };
 
   return (
-    <div className="bg-bb-surface border border-bb-border h-full">
+    <div className="bg-bb-surface border border-bb-border h-full flex flex-col overflow-hidden">
       <div className="px-2 py-1 border-b border-bb-border">
         <span className="text-bb-amber font-bold text-[10px]">X LAYER INFRA</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4">
-        {items.map((item) => (
-          <div key={item.key} className="px-2 py-2 text-center border-r border-bb-border last:border-r-0 even:border-r-0 sm:even:border-r sm:last:border-r-0">
+        {items.map((item, idx) => (
+          <div key={item.key} className={`px-2 py-2 text-center border-bb-border ${idx % 2 !== 1 ? "border-r" : ""} ${idx < 2 ? "border-b sm:border-b-0" : ""} ${idx === 2 ? "sm:border-r" : ""}`}>
             <div className="text-[10px] font-bold text-bb-white mb-1">{item.name}</div>
             <div className={`text-[9px] font-bold ${s[item.key] ? "text-bb-green" : "text-bb-dim"}`}>
               {s[item.key] ? "● ON" : "○ OFF"}
