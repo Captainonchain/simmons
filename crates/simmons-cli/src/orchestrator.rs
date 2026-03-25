@@ -6,16 +6,18 @@ use rust_decimal_macros::dec;
 use simmons_alpha::AlphaEngine;
 use simmons_brain::{
     BrainArbOpportunity, BrainBridge, BrainDecision, BrainInput, BrainMarketState,
-    BrainPortfolio, BrainSignal, BrainTradeOutcome,
+    BrainPortfolio, BrainSignal, BrainTradeOutcome, FeedbackLoop, MarketConditions,
 };
-use simmons_core::{Action, Config};
+use simmons_core::{Action, Config, Regime, Signal, StrategySignal, TradingMode};
 use simmons_exec::ExecutionEngine;
-use simmons_feeds::{MarketAggregator, OkxFeed};
+use simmons_feeds::{create_integrated_news_feed, MarketAggregator, NewsFeed, NunchiSignals, OkxFeed, XLayerFeed};
 use simmons_risk::{Portfolio, RiskGovernor};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::RwLock;
 use tokio::time::{interval, sleep, Instant};
+use chrono::{Datelike, Timelike};
 use tracing::{debug, error, info, warn};
 
 /// Main trading engine orchestrator
@@ -29,6 +31,21 @@ pub struct Engine {
     risk: RiskGovernor,
     exec: ExecutionEngine,
     symbols: Vec<String>,
+    feedback: FeedbackLoop,
+    /// Nunchi signal aggregator
+    nunchi: NunchiSignals,
+    /// X Layer DEX feed
+    xlayer_feed: XLayerFeed,
+    /// News/sentiment feed (shared with background fetcher)
+    news_feed: Arc<RwLock<NewsFeed>>,
+    /// Background task handles
+    _background_tasks: Vec<tokio::task::JoinHandle<()>>,
+    /// Last decision reasoning for feedback loop
+    last_reasoning: Option<String>,
+    /// Last signals used for feedback loop
+    last_signals: Vec<String>,
+    /// Last market conditions for feedback loop
+    last_conditions: Option<MarketConditions>,
 }
 
 impl Engine {
@@ -75,6 +92,40 @@ impl Engine {
         let alpha = AlphaEngine::default();
 
         let symbols = config.symbols.clone();
+        let feedback = FeedbackLoop::with_defaults();
+
+        // Initialize Nunchi signal aggregator
+        let nunchi = NunchiSignals::with_defaults();
+
+        // Initialize X Layer feed with token addresses
+        let xlayer_feed = XLayerFeed::with_defaults();
+
+        // X Layer token addresses for price tracking
+        let xlayer_tokens = vec![
+            ("ETH".to_string(), "0x5a77f1443d16ee5761d310e38b62f77f726bc71c".to_string()), // WETH
+            ("USDT".to_string(), "0x1E4a5963aBFD975d8c9021ce480b42188849D41d".to_string()),
+            ("USDC".to_string(), "0x74b7f16337b8972027f6196a17a631ac6de26d22".to_string()),
+            ("BTC".to_string(), "0xea034fb02eb1808c2cc3adbc15f447b93cbe08e1".to_string()), // WBTC
+            ("OKB".to_string(), "0xdf54b6c6195ea4d948d03bfd818d365cf175cfc2".to_string()),
+        ];
+        let xlayer_handle = xlayer_feed.start_polling(xlayer_tokens);
+
+        // Initialize integrated news feed with OnchainOS signals
+        let (news_feed, news_handle) = create_integrated_news_feed(vec![
+            "xlayer".to_string(),
+            "ethereum".to_string(),
+        ]);
+
+        // Track background tasks
+        let mut background_tasks = Vec::new();
+        background_tasks.push(xlayer_handle);
+        background_tasks.push(news_handle);
+
+        info!("Initialized data feeds:");
+        info!("  - OKX WebSocket: {}", config.feeds.okx_ws_url);
+        info!("  - X Layer DEX feed: enabled");
+        info!("  - News/Signals feed: enabled (xlayer, ethereum)");
+        info!("  - Nunchi aggregator: enabled");
 
         Ok(Self {
             config,
@@ -86,6 +137,14 @@ impl Engine {
             risk,
             exec,
             symbols,
+            feedback,
+            nunchi,
+            xlayer_feed,
+            news_feed,
+            _background_tasks: background_tasks,
+            last_reasoning: None,
+            last_signals: Vec::new(),
+            last_conditions: None,
         })
     }
 
@@ -111,7 +170,8 @@ impl Engine {
             None
         };
 
-        info!("Starting trading loop...");
+        let auto_invoke = self.config.brain.auto_invoke;
+        info!("Starting trading loop (auto_invoke={})...", auto_invoke);
         info!("Signals file: {:?}", self.brain.signals_path());
         info!("Decision file: {:?}", self.brain.decision_path());
         info!("");
@@ -125,9 +185,16 @@ impl Engine {
                 }
             }
 
-            // Update market data
+            // Update market data from OKX WebSocket
             while let Ok(tick) = tick_rx.try_recv() {
                 self.aggregator.update_tick(tick);
+            }
+
+            // Update DEX prices from X Layer for CeDeFi arbitrage detection
+            for symbol in &self.symbols.clone() {
+                if let Some(dex_price) = self.get_xlayer_price(symbol).await {
+                    self.aggregator.update_dex_price(symbol, dex_price);
+                }
             }
 
             // Wait for update interval
@@ -140,10 +207,29 @@ impl Engine {
                         continue; // Need more data
                     }
 
-                    // Generate signals
-                    let signals = self.alpha.generate_signals(symbol, &prices);
+                    // Generate signals from alpha engine
+                    let mut signals = self.alpha.generate_signals(symbol, &prices);
                     let regime = self.alpha.detect_regime(&prices);
-                    let (combined, confidence) = self.alpha.combine_signals(&signals);
+
+                    // Add sentiment signal from news feed
+                    if let Some(sentiment_signal) = self.get_sentiment_signal(symbol).await {
+                        signals.push(sentiment_signal);
+                    }
+
+                    // Use Nunchi to aggregate signals
+                    self.nunchi.set_regime(regime);
+                    let nunchi_score = self.nunchi.aggregate(&signals);
+                    let trade_decision = self.nunchi.should_trade(&nunchi_score, dec!(0.3));
+
+                    // Use Nunchi combined signal and confidence
+                    let combined = match nunchi_score.recommendation {
+                        simmons_feeds::nunchi::NunchiRecommendation::StrongBuy => Signal::StrongBuy,
+                        simmons_feeds::nunchi::NunchiRecommendation::Buy => Signal::Buy,
+                        simmons_feeds::nunchi::NunchiRecommendation::Sell => Signal::Sell,
+                        simmons_feeds::nunchi::NunchiRecommendation::StrongSell => Signal::StrongSell,
+                        _ => Signal::Hold,
+                    };
+                    let confidence = nunchi_score.confidence;
 
                     let current_price = *prices.last().unwrap_or(&Decimal::ZERO);
 
@@ -163,9 +249,37 @@ impl Engine {
                     // Build brain input
                     let input = self.build_brain_input(symbol, &prices, &signals, &arb_opps);
 
-                    // Write signals for Claude
-                    if let Err(e) = self.brain.write_signals(&input) {
-                        error!("Failed to write signals: {}", e);
+                    // Store market conditions for feedback loop
+                    self.last_conditions = Some(MarketConditions {
+                        regime: format!("{:?}", regime).to_lowercase(),
+                        volatility: input.market_state.volatility_1h,
+                        spread_bps: input.market_state.spread_bps,
+                        volume_relative: Decimal::ONE, // TODO: calculate relative volume
+                        time_of_day: chrono::Utc::now().hour() as u8,
+                        day_of_week: chrono::Utc::now().weekday().num_days_from_monday() as u8,
+                    });
+
+                    // Store signals used
+                    self.last_signals = signals.iter().map(|s| s.strategy.clone()).collect();
+
+                    // AUTONOMOUS MODE: Request decision directly from Claude
+                    if auto_invoke {
+                        match self.brain.request_decision(&input).await {
+                            Ok(Some(decision)) => {
+                                self.handle_decision(decision).await?;
+                            }
+                            Ok(None) => {
+                                debug!("No decision returned (auto_invoke may be disabled)");
+                            }
+                            Err(e) => {
+                                error!("Failed to get Claude decision: {}", e);
+                            }
+                        }
+                    } else {
+                        // INTERACTIVE MODE: Write signals, check for decision later
+                        if let Err(e) = self.brain.write_signals(&input) {
+                            error!("Failed to write signals: {}", e);
+                        }
                     }
                 }
             }
@@ -173,9 +287,26 @@ impl Engine {
             // Check for position exits (stop loss / take profit)
             self.check_exits().await?;
 
-            // Check for Claude decision
-            if let Some(decision) = self.brain.read_decision()? {
-                self.handle_decision(decision).await?;
+            // INTERACTIVE MODE: Check for Claude decision (manual invocation)
+            if !auto_invoke {
+                if let Some(decision) = self.brain.read_decision()? {
+                    self.handle_decision(decision).await?;
+                }
+            }
+
+            // Generate feedback report if due
+            if self.feedback.should_report() {
+                let report = self.feedback.performance_report();
+                info!("");
+                info!("╔═══ LEARNING REPORT ═══╗");
+                info!("║ Win Rate: {:.1}%", report.win_rate * dec!(100));
+                info!("║ Total PnL: ${:.2}", report.total_pnl);
+                info!("║ Trades: {}", report.total_trades);
+                for rec in &report.recommendations {
+                    info!("║ → {}", rec);
+                }
+                info!("╚════════════════════════╝");
+                self.feedback.mark_reported();
             }
 
             // Small delay to prevent CPU spinning
@@ -325,7 +456,7 @@ impl Engine {
         }
     }
 
-    async fn check_exits(&self) -> Result<()> {
+    async fn check_exits(&mut self) -> Result<()> {
         // Update positions with current prices
         let mut prices = HashMap::new();
         for symbol in &self.symbols {
@@ -339,8 +470,32 @@ impl Engine {
         let exits = self.portfolio.check_exits();
         for (symbol, price, reason) in exits {
             info!("Triggering {} for {} @ ${}", reason, symbol, price);
-            if let Err(e) = self.exec.close_position(&symbol, price, &reason).await {
-                error!("Failed to close position: {}", e);
+            match self.exec.close_position(&symbol, price, &reason).await {
+                Ok(trade) => {
+                    info!("✓ Exit filled: P&L ${:.2}", trade.pnl);
+
+                    // FEEDBACK LOOP: Record trade outcome for learning
+                    let reasoning = format!("Auto exit: {}", reason);
+                    let signals = self.last_signals.clone();
+                    let conditions = self.last_conditions.clone().unwrap_or_default();
+
+                    self.feedback.on_trade_complete(
+                        trade.clone(),
+                        &reasoning,
+                        signals,
+                        vec![],
+                        conditions,
+                    );
+
+                    // Update brain state
+                    if let Ok(mut state) = self.brain.load_state() {
+                        state.record_trade(trade.outcome, trade.pnl);
+                        let _ = self.brain.save_state(&state);
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to close position: {}", e);
+                }
             }
         }
 
@@ -364,6 +519,9 @@ impl Engine {
         info!("║ Reasoning: {}", decision.reasoning);
         info!("╚════════════════════════╝");
         info!("");
+
+        // Store reasoning for feedback loop
+        self.last_reasoning = Some(decision.reasoning.clone());
 
         match decision.action() {
             Action::Trade => {
@@ -430,7 +588,20 @@ impl Engine {
                         Ok(trade) => {
                             info!("✓ Closed position: P&L ${:.2}", trade.pnl);
 
-                            // Update state
+                            // FEEDBACK LOOP: Record trade outcome for learning
+                            let reasoning = self.last_reasoning.clone().unwrap_or_default();
+                            let signals = self.last_signals.clone();
+                            let conditions = self.last_conditions.clone().unwrap_or_default();
+
+                            self.feedback.on_trade_complete(
+                                trade.clone(),
+                                &reasoning,
+                                signals,
+                                vec![], // patterns (could extract from signals)
+                                conditions,
+                            );
+
+                            // Update brain state
                             let mut state = self.brain.load_state()?;
                             state.record_trade(trade.outcome, trade.pnl);
                             state.last_decision = Some(decision);
@@ -459,6 +630,98 @@ impl Engine {
         info!("║ Realized P&L: ${:.2}", self.portfolio.snapshot().realized_pnl);
         info!("║ Win Rate: {:.1}%", self.portfolio.win_rate() * dec!(100));
         info!("║ Max Drawdown: {:.1}%", self.portfolio.drawdown() * dec!(100));
+        info!("╠═══════════════════════════════════════╣");
+        info!("║          LEARNING INSIGHTS             ║");
+        info!("╠═══════════════════════════════════════╣");
+
+        let insights = self.feedback.get_insights();
+        info!("║ Period Trades: {}", insights.period_trades);
+        info!("║ Period Win Rate: {:.1}%", insights.period_win_rate * dec!(100));
+        info!("║ Period PnL: ${:.2}", insights.period_pnl);
+
+        // Show best strategies
+        if !insights.best_strategies.is_empty() {
+            info!("║ Best Strategies:");
+            for strat in insights.best_strategies.iter().take(3) {
+                info!("║   • {} ({:.1}% WR)", strat.name, strat.win_rate * dec!(100));
+            }
+        }
+
+        // Show recommendations
+        if !insights.recommendations.is_empty() {
+            info!("║ Recommendations:");
+            for rec in &insights.recommendations {
+                info!("║   → {}", rec);
+            }
+        }
+
+        // Strategy health
+        let health = self.feedback.evaluate_strategy_health();
+        info!("║ Strategy Health: {:?}", health.overall);
+        if !health.critical.is_empty() {
+            for entry in &health.critical {
+                warn!("║   ⚠ {} needs attention ({:.1}% WR)", entry.name, entry.win_rate * dec!(100));
+            }
+        }
+
         info!("╚═══════════════════════════════════════╝");
+    }
+
+    /// Get feedback loop for external access
+    pub fn feedback(&self) -> &FeedbackLoop {
+        &self.feedback
+    }
+
+    /// Get mutable feedback loop
+    pub fn feedback_mut(&mut self) -> &mut FeedbackLoop {
+        &mut self.feedback
+    }
+
+    /// Get sentiment signal from news feed
+    async fn get_sentiment_signal(&self, symbol: &str) -> Option<StrategySignal> {
+        let news_feed = self.news_feed.read().await;
+        let snapshot = news_feed.aggregate();
+
+        // Only use sentiment if we have enough data
+        if snapshot.confidence < dec!(0.3) {
+            return None;
+        }
+
+        // Extract keyword (e.g., "BTC" from "BTC-USDT")
+        let keyword = symbol.split('-').next().unwrap_or(symbol).to_lowercase();
+
+        // Try keyword-specific sentiment first
+        let score = news_feed
+            .get_keyword_sentiment(&keyword)
+            .unwrap_or(snapshot.overall_score);
+
+        let signal = if score > dec!(0.5) {
+            Signal::StrongBuy
+        } else if score > dec!(0.2) {
+            Signal::Buy
+        } else if score < dec!(-0.5) {
+            Signal::StrongSell
+        } else if score < dec!(-0.2) {
+            Signal::Sell
+        } else {
+            Signal::Hold
+        };
+
+        Some(StrategySignal {
+            strategy: "sentiment".to_string(),
+            signal,
+            confidence: snapshot.confidence,
+            reason: format!(
+                "Sentiment: {:?} (score: {:.2}, {} samples)",
+                snapshot.overall_level, score, snapshot.sample_size
+            ),
+        })
+    }
+
+    /// Get X Layer DEX price for a symbol
+    async fn get_xlayer_price(&self, symbol: &str) -> Option<Decimal> {
+        // Extract base token (e.g., "ETH" from "ETH-USDT")
+        let base = symbol.split('-').next().unwrap_or(symbol);
+        self.xlayer_feed.get_price(base).await
     }
 }

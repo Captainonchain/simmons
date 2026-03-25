@@ -1,8 +1,28 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ResponsiveGridLayout, type Layout, type Layouts } from "react-grid-layout";
+import { Responsive } from "react-grid-layout";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ResponsiveGridLayout = Responsive as any;
 import "react-grid-layout/css/styles.css";
+
+// Define types (react-grid-layout exports vary by version)
+interface Layout {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  maxW?: number;
+  minH?: number;
+  maxH?: number;
+  static?: boolean;
+  isDraggable?: boolean;
+  isResizable?: boolean;
+}
+type Layouts = { [P: string]: Layout[] };
 
 const STORAGE_KEY = "simmons-grid-layouts";
 
@@ -93,7 +113,7 @@ export function DashboardGrid({ children, editMode }: DashboardGridProps) {
     return () => ro.disconnect();
   }, []);
 
-  const handleLayoutChange = useCallback((_: Layout[], allLayouts: Layouts) => {
+  const handleLayoutChange = useCallback((_currentLayout: Layout[], allLayouts: Layouts) => {
     setLayouts(allLayouts);
     saveLayouts(allLayouts);
   }, []);

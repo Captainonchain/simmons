@@ -9,6 +9,6 @@ pub mod learning;
 pub mod types;
 
 pub use bridge::BrainBridge;
-pub use feedback::FeedbackLoop;
-pub use learning::LearningEngine;
+pub use feedback::{FeedbackLoop, PerformanceReport, StrategyBreakdown, HealthReport, StrategyHealth, StrategyHealthEntry};
+pub use learning::{LearningEngine, MarketConditions, LearningInsights, PatternStats, StrategyStats};
 pub use types::*;

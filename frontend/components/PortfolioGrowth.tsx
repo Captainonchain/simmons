@@ -58,7 +58,7 @@ export const PortfolioGrowth = memo(function PortfolioGrowth({ portfolio }: Port
           momentum={true}
           showValue={false}
           exaggerate={true}
-          referenceLine={{ value: data[0]?.value ?? equity, color: "#444", label: "START" }}
+          referenceLine={{ value: data[0]?.value ?? equity }}
         />
       </div>
     </div>

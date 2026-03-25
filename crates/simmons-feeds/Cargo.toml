@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 simmons-core = { workspace = true }
+simmons-infra = { path = "../simmons-infra" }
 tokio = { workspace = true }
 tokio-tungstenite = { workspace = true }
 futures-util = { workspace = true }

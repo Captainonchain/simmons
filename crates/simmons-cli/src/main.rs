@@ -8,6 +8,7 @@ use simmons_alpha::AlphaEngine;
 use simmons_brain::BrainBridge;
 use simmons_core::{Config, TradingMode};
 use simmons_feeds::{MarketAggregator, OkxFeed};
+use simmons_mcp::TradingState;
 use simmons_risk::Portfolio;
 use std::sync::Arc;
 use tracing::info;
@@ -66,16 +67,23 @@ enum Commands {
         #[arg(short, long, default_value = "3000")]
         port: u16,
     },
+    /// Run as MCP server (for Claude integration)
+    Mcp,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env().add_directive("simmons=info".parse()?))
-        .init();
-
     let cli = Cli::parse();
+
+    // For MCP mode, skip logging to stderr (it interferes with the protocol)
+    let is_mcp = matches!(cli.command, Some(Commands::Mcp));
+
+    if !is_mcp {
+        // Initialize logging
+        tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::from_default_env().add_directive("simmons=info".parse()?))
+            .init();
+    }
 
     // Load config
     let mut config = Config::load_or_default(&cli.config);
@@ -95,15 +103,17 @@ async fn main() -> Result<()> {
             .collect();
     }
 
-    info!("╔═══════════════════════════════════════════════════════════╗");
-    info!("║                      SIMMONS v0.1.0                       ║");
-    info!("║              Max ROI DeFi Trading System                  ║");
-    info!("╚═══════════════════════════════════════════════════════════╝");
-    info!("");
-    info!("Mode: {:?}", config.mode);
-    info!("Capital: ${}", config.capital_usd);
-    info!("Symbols: {:?}", config.symbols);
-    info!("");
+    if !is_mcp {
+        info!("╔═══════════════════════════════════════════════════════════╗");
+        info!("║                      SIMMONS v0.1.0                       ║");
+        info!("║              Max ROI DeFi Trading System                  ║");
+        info!("╚═══════════════════════════════════════════════════════════╝");
+        info!("");
+        info!("Mode: {:?}", config.mode);
+        info!("Capital: ${}", config.capital_usd);
+        info!("Symbols: {:?}", config.symbols);
+        info!("");
+    }
 
     match cli.command {
         Some(Commands::Run { duration }) => {
@@ -121,6 +131,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Dashboard { port }) => {
             web::start_server(config, port).await?;
+        }
+        Some(Commands::Mcp) => {
+            run_mcp_server(config).await?;
         }
         None => {
             // Default: start dashboard
@@ -263,4 +276,16 @@ async fn show_status(config: Config) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn run_mcp_server(config: Config) -> Result<()> {
+    // For MCP mode, we don't log to stderr as it interferes with the protocol
+    // The MCP server handles its own logging
+
+    // Create trading state with sample data for testing
+    // In production, this would be updated by the alpha engine
+    let state = TradingState::with_sample_data(config.capital_usd);
+
+    // Run the MCP server (blocks until client disconnects)
+    simmons_mcp::server::run_server(state).await
 }
