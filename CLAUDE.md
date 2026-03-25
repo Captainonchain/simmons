@@ -1,46 +1,70 @@
-# Simmons v2.0 - Autonomous AI Trading Engine
+# Simmons v3.0 - Dual Brain Autonomous Trading Engine
 
 ## Overview
 
-Simmons is a fully autonomous AI trading engine using Claude as the reasoning brain. v2.0 introduces **MCP (Model Context Protocol)** integration for direct Claude tool access.
+Simmons is a fully autonomous AI trading engine using Claude as the reasoning brain. v3.0 introduces the **Dual Brain Architecture** - two autonomous brains (TA + Fundamental) running in parallel, feeding signals to Claude for final decisions.
 
-## Architecture v2.0
+## Architecture v3.0 - Dual Brain
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           SIMMONS v2.0                                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │                    CLAUDE ORCHESTRATOR                             │ │
-│  │         /simmons skill + Multi-Agent Debate System                 │ │
-│  │  Analysts (4) → Researchers (Bull/Bear) → Risk (3) → Execute      │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                          │                   │                           │
-│                          ▼                   ▼                           │
-│  ┌──────────────────────────────┐  ┌────────────────────────────────┐  │
-│  │   SIMMONS MCP SERVER         │  │   ONCHAINOS MCP SERVER         │  │
-│  │   get_signals, get_portfolio │  │   security_*, signal_*         │  │
-│  │   submit_trade, get_regime   │  │   swap_*, market_*, portfolio  │  │
-│  └──────────────────────────────┘  └────────────────────────────────┘  │
-│                          │                   │                           │
-│                          ▼                   ▼                           │
-│  ┌──────────────────────────────┐  ┌────────────────────────────────┐  │
-│  │   RUST ENGINE LAYER          │  │   OKX WEB3 BACKEND             │  │
-│  │   Feeds → Alpha → Risk       │  │   400+ DEXs, 25+ Chains        │  │
-│  └──────────────────────────────┘  └────────────────────────────────┘  │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                         SIMMONS DUAL BRAIN v3.0                                │
+├───────────────────────────────────────────────────────────────────────────────┤
+│                                                                                │
+│  ┌─────────────────────────────────┐     ┌──────────────────────────────────┐ │
+│  │   TA BRAIN (Nunchi 14 Strats)   │     │   FUNDAMENTAL BRAIN (Multi-Src)  │ │
+│  │                                 │     │                                  │ │
+│  │  ┌───────────────────────────┐  │     │  ┌────────────────────────────┐  │ │
+│  │  │ RADAR: 0-400 score        │  │     │  │ WHALE: OnchainOS signals   │  │ │
+│  │  │ PULSE: 6-tier momentum    │  │     │  │ TWITTER: KOL sentiment     │  │ │
+│  │  │ GUARD: 2-phase stops      │  │     │  │ NEWS: RSS feeds            │  │ │
+│  │  └───────────────────────────┘  │     │  │ SECURITY: Honeypot scan    │  │ │
+│  │                                 │     │  └────────────────────────────┘  │ │
+│  │  14 Strategies: MM/ARB/DIR     │     │                                  │ │
+│  └────────────────┬────────────────┘     └───────────────┬──────────────────┘ │
+│                   │                                       │                    │
+│                   └─────────────────┬─────────────────────┘                    │
+│                                     ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐   │
+│  │                        CONSENSUS LAYER                                  │   │
+│  │  - Merge: TA (60%) + Fund (40%) weighted                               │   │
+│  │  - Conflict detection + debate trigger                                 │   │
+│  │  - Adaptive weights via REFLECT                                        │   │
+│  └────────────────────────────────────────────────────────────────────────┘   │
+│                                     │                                          │
+│                                     ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐   │
+│  │                  CLAUDE ORCHESTRATOR (/simmons-dual)                    │   │
+│  │  - Multi-agent debate (Bull/Bear/Risk)                                 │   │
+│  │  - Final decision with GUARD stops                                     │   │
+│  └────────────────────────────────────────────────────────────────────────┘   │
+│                                     │                                          │
+│                                     ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐   │
+│  │                        EXECUTION LAYER                                  │   │
+│  │  Paper: Simmons Rust engine | Live DEX: OnchainOS swap                 │   │
+│  └────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Running Modes
 
-### MCP Server Mode (NEW - for Claude integration)
+### Dual Brain Mode (NEW)
 ```bash
-# Build release
+# Build
 cargo build --release
 
-# Run as MCP server
+# Run dual brain loop
+./target/release/simmons dual
+
+# Run with dashboard
+./target/release/simmons dual --dashboard
+# Dashboard: http://localhost:3456
+```
+
+### MCP Server Mode
+```bash
 ./target/release/simmons mcp
 
 # Register with Claude Code
@@ -53,9 +77,126 @@ claude mcp add simmons ./target/release/simmons mcp
 # Open http://localhost:3000
 ```
 
-### Paper Trading
+### Test Individual Brains
 ```bash
-./target/release/simmons run --mode paper --capital 1000
+# Test TA Brain
+./target/release/simmons test-ta-brain --symbol BTC-USDT
+
+# Test Fund Brain
+./target/release/simmons test-fund-brain --token BTC --chain ethereum
+```
+
+## Claude Skills
+
+| Skill | Description |
+|-------|-------------|
+| `/simmons-dual` | **NEW** Dual brain orchestrator - reads context from both brains |
+| `/simmons` | Legacy orchestrator - multi-agent trading decision |
+| `/simmons-brain` | Legacy file-based decision skill |
+
+## TA Brain Components
+
+### RADAR Score (0-400)
+Opportunity screening every 15 minutes:
+
+| Pillar | Weight | Metrics |
+|--------|--------|---------|
+| Market Structure | 35% (140) | Volume, OI, depth |
+| Technicals | 40% (160) | Trend, RSI, patterns |
+| Funding | 25% (100) | Rate direction, extremes |
+
+**Thresholds:**
+- 250-400: Elite → immediate entry
+- 170-250: Solid → entry with PULSE confirm
+- 140-170: Marginal → queue only
+- <140: Skip
+
+### PULSE Signal (6 tiers)
+Momentum detection every 60 seconds:
+- Tier 6: Extreme momentum
+- Tier 5: Strong momentum
+- Tier 4: Moderate momentum
+- Tier 3: Mild momentum
+- Tier 2: Weak momentum
+- Tier 1: No momentum
+
+### GUARD Stops (2-phase)
+- **Phase 1**: 3% retrace, 3 breaches max
+- **Phase 2**: 1.5% retrace (at 8% ROE), 2 breaches max
+- **Stagnation exit**: 60 min at same level with 8%+ ROE
+
+### 14 Strategies
+- **Market Making (6)**: engine_mm, avellaneda_mm, regime_mm, simple_mm, grid_mm, liquidation_mm
+- **Arbitrage (2)**: funding_arb, basis_arb
+- **Directional (3)**: momentum_breakout, mean_reversion, aggressive_taker
+- **Infrastructure (3)**: hedge_agent, rfq_agent, claude_agent
+
+## Fund Brain Components
+
+### Data Sources
+
+| Source | Weight | Data |
+|--------|--------|------|
+| OnchainOS | 50% | Whale/smart money signals |
+| Twitter | 30% | KOL mentions, sentiment |
+| News | 20% | Headlines sentiment |
+
+### Security Scanner
+**BLOCK trading if:**
+- `is_honeypot = true`
+- `buy_tax > 20%` or `sell_tax > 20%`
+- `can_take_ownership = true`
+- `risk_score >= 80`
+
+**WARN (reduce size) if:**
+- `tax > 5%`
+- `is_mintable = true`
+- `risk_score >= 50`
+
+## Consensus Layer
+
+Merges both brain outputs:
+- Default weights: TA 60%, Fund 40%
+- Conflict detection when sentiment diverges > 0.5
+- Adaptive weights based on historical accuracy
+
+## REFLECT Learning System
+
+After each trade:
+1. Generate reflection (what worked/failed)
+2. Log mistakes to `data/mistakes.json`
+3. Update brain weights based on accuracy
+4. Create avoid rules for common mistakes
+
+## Configuration
+
+### Dual Brain Config (`config/brains.toml`)
+```toml
+[trading]
+mode = "paper"
+chains = ["solana", "base", "ethereum"]
+capital_usd = 1000
+
+[ta_brain.radar]
+elite_threshold = 250
+solid_threshold = 170
+marginal_threshold = 140
+
+[ta_brain.guard]
+phase1_retrace = 0.03
+phase2_retrace = 0.015
+stagnation_timeout_mins = 60
+
+[fund_brain.sources]
+onchain_weight = 0.5
+twitter_weight = 0.3
+news_weight = 0.2
+
+[consensus]
+ta_weight = 0.6
+fund_weight = 0.4
+conflict_reduces_size = true
+adaptive_weights = true
 ```
 
 ## MCP Tools
@@ -70,54 +211,32 @@ claude mcp add simmons ./target/release/simmons mcp
 | `submit_trade` | Submit trade decision (trade/skip/close) |
 | `record_outcome` | Record outcome for learning |
 | `get_regime` | Market regime classification |
+| `check_circuit_breaker` | Check if trading enabled |
 
 ### OnchainOS MCP Server (DEX Execution)
 
 | Tool | Description |
 |------|-------------|
 | `security_token_scan` | Honeypot, tax, mint risk detection |
-| `security_tx_scan` | Transaction pre-execution scan |
 | `signal_list` | Smart money / whale / KOL signals |
 | `swap_quote` | DEX swap quote (read-only) |
 | `swap_swap` | Execute DEX swap |
 | `market_prices` | Real-time token prices |
-| `portfolio_balances` | Wallet balances across chains |
 
-**OnchainOS Chains:** solana, ethereum, base, bsc, arbitrum, polygon, avalanche, optimism, sui, ton, tron (25+ total)
+**Supported Chains:** solana, ethereum, base, bsc, arbitrum, polygon, avalanche, optimism (25+ total)
 
-## Claude Skills
-
-| Skill | Description |
-|-------|-------------|
-| `/simmons` | Main orchestrator - multi-agent trading decision |
-| `/simmons-brain` | Legacy file-based decision skill |
-
-## Decision Flow (TradingAgents Pattern)
+## Decision Flow
 
 ```
-Phase 1: GATHER (Parallel)
-├── Technical Analyst → signals, momentum
-├── Fundamental Analyst → metrics, TVL
-├── Sentiment Analyst → smart money (onchainos signal_list)
-└── On-chain Analyst → security (onchainos security_token_scan)
-
-Phase 2: DEBATE (Sequential)
-├── Bull Researcher → bullish thesis
-├── Bear Researcher → bearish thesis
-└── Research Manager → synthesis
-
-Phase 3: RISK (Debate)
-├── Aggressive → larger position
-├── Conservative → smaller position
-└── Neutral → balanced view
-
-Phase 4: SECURITY PRE-FLIGHT (onchainos)
-├── security_token_scan → honeypot, tax, mint risks
-└── BLOCK if any red flags detected
-
-Phase 5: EXECUTE
-├── Paper mode → submit_trade via Simmons MCP
-└── Live mode → swap_swap via OnchainOS MCP (DEX)
+1. READ: data/dual_brain_context.json
+2. CHECK: data/mistakes.json (avoid rules)
+3. ANALYZE: TA Brain (RADAR, PULSE, strategies)
+4. ANALYZE: Fund Brain (whale, twitter, news, security)
+5. MERGE: Consensus layer
+6. DEBATE: If conflict detected, run Bull/Bear agents
+7. SIZE: Calculate position with all modifiers
+8. EXECUTE: Paper (Simmons MCP) or Live (OnchainOS)
+9. REFLECT: Record outcome, update weights
 ```
 
 ## Risk Management
@@ -127,48 +246,22 @@ Phase 5: EXECUTE
 | Max Position | 15% of capital |
 | Max Drawdown | 20% (circuit breaker) |
 | Max Consecutive Losses | 3 (circuit breaker) |
-| Default Stop Loss | 2% |
-| Default Take Profit | 5% |
-
-## Configuration
-
-### MCP Registration (`~/.claude.json` or `.claude/settings.json`)
-```json
-{
-  "mcpServers": {
-    "simmons": {
-      "command": "/path/to/simmons",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Trading Config (`config/settings.toml`)
-```toml
-mode = "paper"
-capital_usd = 1000
-symbols = ["BTC-USDT", "ETH-USDT", "SOL-USDT"]
-
-[risk]
-max_position_pct = 0.15
-max_drawdown = 0.20
-kelly_fraction = 0.25
-```
+| Conflict Size Reduction | 50% |
+| Security Warning Reduction | 30% |
 
 ## Crates
 
 | Crate | Purpose |
 |-------|---------|
 | simmons-core | Types, config, common utilities |
-| simmons-feeds | OKX, X Layer, price aggregation |
+| simmons-feeds | OKX, Twitter, News, OnchainOS |
 | simmons-alpha | Signal generation, regime detection |
-| simmons-brain | Legacy Claude IPC, learning |
+| **simmons-brain** | **Dual brain (TA + Fund), consensus, REFLECT** |
 | simmons-risk | Portfolio, Kelly sizing, risk limits |
 | simmons-exec | Order execution |
 | simmons-infra | Bridge, DEX protocols |
-| **simmons-mcp** | **MCP server (NEW)** |
-| simmons-cli | Main binary, orchestrator |
+| simmons-mcp | MCP server |
+| simmons-cli | Main binary, orchestrator, dual loop |
 
 ## Quick Start
 
@@ -176,13 +269,25 @@ kelly_fraction = 0.25
 # 1. Build
 cargo build --release
 
-# 2. Register MCP server with Claude Code
-claude mcp add simmons ./target/release/simmons mcp
+# 2. Run dual brain loop
+./target/release/simmons dual --dashboard
 
-# 3. Use /simmons skill in Claude Code
+# 3. In another terminal, use /simmons-dual skill
 cd ~/simmons
 claude
-> /simmons
+> /simmons-dual
+```
+
+## Environment Variables
+
+```bash
+# Required for Fund Brain
+export TWITTER_BEARER_TOKEN=xxx
+
+# Required for OnchainOS (live trading)
+export OKX_API_KEY=xxx
+export OKX_SECRET_KEY=xxx
+export OKX_PASSPHRASE=xxx
 ```
 
 ## Development
@@ -195,10 +300,18 @@ cargo fmt             # Format
 cargo clippy          # Lint
 ```
 
-## Full Architecture Doc
+## Files Summary
 
-See `ARCHITECTURE_V2.md` for complete architecture design including:
-- Multi-agent patterns from TradingAgents research
-- OKX OnchainOS integration plan
-- Memory and learning system
-- Implementation phases
+| File | Purpose |
+|------|---------|
+| `crates/simmons-brain/src/ta_brain.rs` | TA Brain (RADAR/PULSE/GUARD) |
+| `crates/simmons-brain/src/fund_brain.rs` | Fund Brain (whale/twitter/news) |
+| `crates/simmons-brain/src/consensus.rs` | Consensus layer |
+| `crates/simmons-brain/src/reflect.rs` | Self-learning system |
+| `crates/simmons-feeds/src/twitter.rs` | Twitter API integration |
+| `crates/simmons-feeds/src/onchain.rs` | OnchainOS integration |
+| `crates/simmons-cli/src/dual_loop.rs` | Dual brain loop |
+| `skills/simmons-dual.md` | Claude skill |
+| `config/brains.toml` | Brain configuration |
+| `data/dual_brain_context.json` | Context file for Claude |
+| `data/mistakes.json` | Learned avoid rules |

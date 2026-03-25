@@ -429,6 +429,7 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         .route("/api/memory", get(memory_handler))
         .route("/api/brain/decide", post(decide_handler))
         .route("/api/brain/state", get(brain_state_handler))
+        .route("/api/trades", get(trades_handler))
         .route("/ws", get(ws_handler))
         .fallback_service(
             ServeDir::new("frontend/out").append_index_html_on_directories(true),
@@ -584,15 +585,19 @@ async fn build_full_update(state: &AppState) -> Option<DashboardUpdate> {
         },
     };
 
-    // Build Decision & Risk Layer
-    let snapshot = state.portfolio.snapshot();
-    let initial = state.config.capital_usd;
-    let pnl = snapshot.realized_pnl + snapshot.unrealized_pnl;
-    let pnl_pct = if !initial.is_zero() {
-        (pnl / initial * dec!(100)).to_string().parse().unwrap_or(0.0)
-    } else {
-        0.0
-    };
+    // Build Decision & Risk Layer - Use brain state as single source of truth
+    let brain_state = state.brain.load_state().ok();
+    let initial_capital = 100.0_f64;
+    let total_pnl: f64 = brain_state.as_ref()
+        .and_then(|s| s.total_pnl.to_string().parse().ok())
+        .unwrap_or(0.0);
+    let total_trades = brain_state.as_ref().map(|s| s.total_trades).unwrap_or(0);
+    let wins = brain_state.as_ref().map(|s| s.wins).unwrap_or(0);
+    let losses = brain_state.as_ref().map(|s| s.losses).unwrap_or(0);
+    let win_rate = if total_trades > 0 { (wins as f64 / total_trades as f64) * 100.0 } else { 0.0 };
+    let equity = initial_capital + total_pnl;
+    let pnl_pct = total_pnl; // Since capital is $100, pnl% = pnl$
+    let drawdown = if total_pnl < 0.0 { -total_pnl / initial_capital } else { 0.0 };
 
     let positions: Vec<PositionData> = state.portfolio.positions().into_iter().map(|p| {
         let pnl_pct = p.pnl_percent().to_string().parse().unwrap_or(0.0);
@@ -611,15 +616,15 @@ async fn build_full_update(state: &AppState) -> Option<DashboardUpdate> {
 
     let decision_risk = DecisionRiskLayer {
         portfolio: PortfolioData {
-            capital: snapshot.capital.to_string().parse().unwrap_or(0.0),
-            equity: state.portfolio.total_equity().to_string().parse().unwrap_or(0.0),
-            pnl: pnl.to_string().parse().unwrap_or(0.0),
+            capital: initial_capital,
+            equity,
+            pnl: total_pnl,
             pnl_pct,
-            drawdown: (snapshot.drawdown * dec!(100)).to_string().parse().unwrap_or(0.0),
-            max_drawdown: 5.0,
+            drawdown,
+            max_drawdown: 0.30,
             sharpe_ratio: 1.5,
-            win_rate: (state.portfolio.win_rate() * dec!(100)).to_string().parse().unwrap_or(0.0),
-            total_trades: state.brain.load_state().map(|s| s.total_trades).unwrap_or(0),
+            win_rate,
+            total_trades,
         },
         positions,
         rebalancer: RebalancerData {
@@ -844,23 +849,60 @@ async fn brain_state_handler(State(state): State<Arc<AppState>>) -> impl IntoRes
     }
 }
 
-async fn circuit_breaker_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let snapshot = state.portfolio.snapshot();
-    let drawdown = snapshot.drawdown;
-    let consecutive_losses = state.brain.load_state().map(|s| {
-        // Count recent losses from trades
-        0u32 // Placeholder
-    }).unwrap_or(0);
+async fn trades_handler(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    let trades_path = "data/trades.json";
+    if std::path::Path::new(trades_path).exists() {
+        match std::fs::read_to_string(trades_path) {
+            Ok(content) => {
+                match serde_json::from_str::<serde_json::Value>(&content) {
+                    Ok(data) => Json(data).into_response(),
+                    Err(_) => Json(serde_json::json!({"trades": []})).into_response(),
+                }
+            }
+            Err(_) => Json(serde_json::json!({"trades": []})).into_response(),
+        }
+    } else {
+        Json(serde_json::json!({"trades": []})).into_response()
+    }
+}
 
-    let risk_level = if drawdown > dec!(0.15) || consecutive_losses >= 3 {
+async fn circuit_breaker_handler(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    // Read trades to calculate consecutive losses
+    let consecutive_losses: u32 = if let Ok(content) = std::fs::read_to_string("data/trades.json") {
+        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&content) {
+            let trades = data.get("trades").and_then(|t| t.as_array()).cloned().unwrap_or_default();
+            let mut count = 0u32;
+            for trade in trades.iter().rev() {
+                if trade.get("outcome").and_then(|o| o.as_str()) == Some("loss") {
+                    count += 1;
+                } else {
+                    break;
+                }
+            }
+            count
+        } else { 0 }
+    } else { 0 };
+
+    // Read brain state for drawdown calculation
+    let brain_state: Option<serde_json::Value> = std::fs::read_to_string("data/state.json")
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok());
+    let total_pnl: f64 = brain_state.as_ref()
+        .and_then(|s| s.get("total_pnl"))
+        .and_then(|p| p.as_str())
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(0.0);
+    let drawdown = if total_pnl < 0.0 { (-total_pnl / 100.0) } else { 0.0 };
+
+    let risk_level = if drawdown > 0.15 || consecutive_losses >= 3 {
         "critical"
-    } else if drawdown > dec!(0.10) || consecutive_losses >= 2 {
+    } else if drawdown > 0.10 || consecutive_losses >= 2 {
         "elevated"
     } else {
         "normal"
     };
 
-    let triggered = consecutive_losses >= 3 || drawdown > dec!(0.20);
+    let triggered = consecutive_losses >= 3 || drawdown > 0.20;
     let can_trade = !triggered && risk_level != "critical";
 
     let position_modifier = match risk_level {

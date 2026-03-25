@@ -1,0 +1,233 @@
+# Simmons Dual Brain Configuration
+# This file configures both TA and Fundamental brains
+
+[trading]
+mode = "paper"  # "paper" or "live"
+chains = ["solana", "base", "ethereum"]
+capital_usd = 1000
+symbols = ["BTC-USDT", "ETH-USDT", "SOL-USDT"]
+
+# ============================================
+# TA BRAIN (Nunchi Strategy Suite)
+# ============================================
+
+[ta_brain]
+update_interval_secs = 10
+use_nunchi = true  # Use Nunchi agent-cli strategies
+
+# APEX Orchestrator Settings
+[ta_brain.apex]
+preset = "default"  # "default", "conservative", "aggressive"
+max_slots = 3       # Maximum concurrent positions
+leverage = 10       # Leverage for perps
+daily_loss_limit = 500  # USD
+
+# RADAR Screening (0-400 score)
+[ta_brain.radar]
+interval_secs = 900  # 15 minutes
+elite_threshold = 250      # Score 250+: Immediate entry
+solid_threshold = 170      # Score 170-250: Entry with PULSE confirm
+marginal_threshold = 140   # Score 140-170: Queue only
+
+# Score breakdown:
+# - Market Structure: 0-140 (35%)
+#   - Volume tiers: 0-60
+#   - OI surge: 0-50
+#   - Depth/liquidity: 0-30
+# - Technicals: 0-160 (40%)
+#   - 4H/1H trend: 0-70
+#   - RSI analysis: 0-50
+#   - Pattern detection: 0-40
+# - Funding: 0-100 (25%)
+#   - Rate direction
+#   - Extremes
+
+# PULSE Momentum Detection (6 tiers)
+[ta_brain.pulse]
+interval_secs = 60
+immediate_mover_threshold = 80  # Score 0-100
+volume_surge_threshold = 70     # Score 0-100
+
+# Tier thresholds:
+# - Tier 6: 90-100 (Extreme momentum)
+# - Tier 5: 75-89 (Strong momentum)
+# - Tier 4: 60-74 (Moderate momentum)
+# - Tier 3: 45-59 (Mild momentum)
+# - Tier 2: 30-44 (Weak momentum)
+# - Tier 1: 0-29 (No momentum)
+
+# GUARD Trailing Stops (2-phase)
+[ta_brain.guard]
+phase1_retrace = 0.03      # 3% retrace triggers phase 1 warning
+phase1_max_breaches = 3    # Exit after 3 breaches in phase 1
+phase2_retrace = 0.015     # 1.5% retrace in phase 2 (tighter)
+phase2_max_breaches = 2    # Exit after 2 breaches in phase 2
+stagnation_timeout_mins = 60  # Exit if stagnant for 60 min
+stagnation_min_roe = 8.0   # Only exit stagnation if ROE >= 8%
+
+# Phase transition: Move to phase 2 at 8% ROE
+
+# Strategy Preferences (14 available)
+[ta_brain.strategies]
+# Market Making (6)
+market_making = ["engine_mm", "avellaneda_mm", "regime_mm"]
+
+# Arbitrage (2)
+arbitrage = ["funding_arb", "basis_arb"]
+
+# Directional (3)
+directional = ["momentum_breakout", "mean_reversion"]
+
+# Infrastructure (3) - always active
+infrastructure = ["hedge_agent", "guard"]
+
+# ============================================
+# FUNDAMENTAL BRAIN (Multi-Source)
+# ============================================
+
+[fund_brain]
+update_interval_secs = 30
+
+# Source Weights (must sum to 1.0)
+[fund_brain.sources]
+onchain_weight = 0.5   # Whale/smart money signals - most reliable
+twitter_weight = 0.3   # Social sentiment
+news_weight = 0.2      # Headlines sentiment
+
+# Whale/Smart Money Settings
+[fund_brain.whale]
+min_trade_usd = 100000   # Minimum trade size to track
+lookback_hours = 24      # Time window for signals
+
+# Signal types tracked:
+# - smart_money: Known profitable wallets
+# - whale: Large holders (>$1M)
+# - kol: Key opinion leaders
+
+# Twitter/X Settings
+[fund_brain.twitter]
+# Requires TWITTER_BEARER_TOKEN env var
+tracked_accounts = [
+    "@solana",
+    "@base",
+    "@coinbase",
+    "@binance",
+    "@ethereum",
+    "@aaboronin",
+    "@DegenSpartan",
+    "@CryptoCobain"
+]
+sentiment_window_hours = 4
+min_kol_followers = 10000
+
+# News RSS Feeds
+[fund_brain.news]
+rss_feeds = [
+    "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    "https://www.theblock.co/rss.xml",
+    "https://decrypt.co/feed"
+]
+
+# Security Scanner Settings
+[fund_brain.security]
+max_tax = 10              # Max buy/sell tax before warning
+block_honeypot = true     # Always block honeypots
+min_liquidity_usd = 50000 # Minimum liquidity required
+
+# Security red flags that BLOCK trading:
+# - is_honeypot = true
+# - buy_tax > 20% OR sell_tax > 20%
+# - can_take_ownership = true
+# - can_change_balance = true
+# - risk_score >= 80
+
+# Security warnings (reduce size):
+# - tax > 5%
+# - is_mintable = true
+# - risk_score >= 50
+
+# ============================================
+# CONSENSUS LAYER
+# ============================================
+
+[consensus]
+ta_weight = 0.6          # TA brain weight (60%)
+fund_weight = 0.4        # Fund brain weight (40%)
+min_confidence = 0.50    # Minimum confidence for action
+conflict_threshold = 0.5 # Sentiment difference for conflict
+conflict_reduces_size = true  # Reduce position on conflict
+conflict_size_multiplier = 0.5  # 50% size if brains disagree
+adaptive_weights = true  # Adjust weights based on performance
+
+# ============================================
+# EXECUTION
+# ============================================
+
+[execution]
+# OnchainOS agentic wallet for live trades
+use_onchainos_wallet = true
+slippage_tolerance = 0.02  # 2%
+mev_protection = true
+
+# Supported chains for DEX execution
+dex_chains = ["solana", "base", "ethereum", "arbitrum", "polygon"]
+
+# Native token addresses
+[execution.native_tokens]
+solana = "So11111111111111111111111111111111111111112"
+ethereum = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+base = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+arbitrum = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+polygon = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+# ============================================
+# RISK MANAGEMENT
+# ============================================
+
+[risk]
+max_position_pct = 0.15      # Max 15% per position
+max_drawdown = 0.20          # 20% drawdown circuit breaker
+max_consecutive_losses = 3   # Circuit breaker after 3 losses
+daily_loss_limit_usd = 100   # Daily loss limit
+
+# Position size modifiers
+[risk.size_modifiers]
+radar_elite = 1.0       # RADAR 250+ = full size
+radar_solid = 0.75      # RADAR 170-250 = 75%
+radar_marginal = 0.50   # RADAR 140-170 = 50%
+conflict = 0.50         # Reduce 50% if brains conflict
+security_warning = 0.70 # Reduce 30% for security warnings
+
+# ============================================
+# REFLECT (Learning System)
+# ============================================
+
+[reflect]
+enabled = true
+data_dir = "data"
+auto_adjust_weights = true  # Adjust brain weights based on accuracy
+
+# Mistake types to track:
+# - ignored_conflict: Traded despite brain disagreement
+# - low_confidence: Traded with < 60% confidence
+# - choppy_regime: Traded in choppy conditions
+# - security_warning: Ignored security concerns
+# - oversized_position: Position too large
+# - bad_timing: Poor entry timing
+
+# ============================================
+# STRATEGY SELECTION LOGIC
+# ============================================
+
+# Claude selects strategy based on conditions:
+#
+# | Market Condition | Recommended Strategy | Reason |
+# |------------------|---------------------|--------|
+# | Low vol, range | avellaneda_mm, grid_mm | Capture spread |
+# | High vol | regime_mm, liquidation_mm | Adaptive spreads |
+# | Trending | momentum_breakout | Follow breakout |
+# | Oversold/overbought | mean_reversion | Fade extremes |
+# | Funding divergence | funding_arb, basis_arb | Capture premium |
+# | Excess inventory | hedge_agent | Reduce exposure |
+# | RADAR > 250 + PULSE 100 | APEX auto-entry | Elite signal |
+# | RADAR > 170 + positive Fund | APEX entry | Standard signal |

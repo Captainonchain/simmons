@@ -32,11 +32,11 @@ export const CircuitBreaker = memo(function CircuitBreaker({
   const getRiskStyle = () => {
     switch (riskLevel) {
       case "critical":
-        return { color: "text-bb-red", bg: "bg-bb-red/10", border: "border-bb-red/30" };
+        return { color: "text-bb-red", bg: "bg-bb-red/15", border: "border-bb-red/40", label: "CRITICAL" };
       case "elevated":
-        return { color: "text-bb-amber", bg: "bg-bb-amber/10", border: "border-bb-amber/30" };
+        return { color: "text-bb-amber", bg: "bg-bb-amber/15", border: "border-bb-amber/40", label: "ELEVATED" };
       default:
-        return { color: "text-bb-green", bg: "bg-bb-green/10", border: "border-bb-green/30" };
+        return { color: "text-bb-green", bg: "bg-bb-green/15", border: "border-bb-green/40", label: "NORMAL" };
     }
   };
 
@@ -62,36 +62,37 @@ export const CircuitBreaker = memo(function CircuitBreaker({
 
       <div className="grid-cell-body space-y-2">
         {/* Risk Level Badge */}
-        <div className={`p-2 border ${style.bg} ${style.border}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[8px] text-bb-dim">RISK LEVEL</span>
-            <span className={`text-[10px] font-bold uppercase ${style.color}`}>
-              {riskLevel}
-            </span>
-          </div>
+        <div className={`p-2 border ${style.bg} ${style.border} flex items-center justify-between`}>
+          <span className="text-[8px] text-bb-dim uppercase tracking-wider">Risk Level</span>
+          <span className={`text-[10px] font-bold uppercase ${style.color}`}>
+            {style.label}
+          </span>
         </div>
 
-        {/* Triggered Reason */}
+        {/* Triggered Alert */}
         {triggered && reason && (
-          <div className="p-2 bg-bb-red/10 border border-bb-red/50">
-            <div className="text-bb-red text-[8px] font-bold uppercase mb-0.5">HALTED</div>
+          <div className="p-2 bg-bb-red/15 border border-bb-red/50 slide-in">
+            <div className="text-bb-red text-[8px] font-bold uppercase mb-1 flex items-center gap-1">
+              <span className="blink">⚠</span> TRADING HALTED
+            </div>
             <div className="text-bb-white text-[9px]">{reason}</div>
           </div>
         )}
 
         {/* Metrics */}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {/* Drawdown */}
-          <div>
-            <div className="flex items-center justify-between text-[8px] mb-0.5">
-              <span className="text-bb-dim">DRAWDOWN</span>
-              <span className={drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-dim"}>
-                {drawdownPct.toFixed(1)}% / {limitPct.toFixed(0)}%
+          <div className="bg-bb-raised p-2 border border-bb-border">
+            <div className="flex items-center justify-between text-[8px] mb-1.5">
+              <span className="text-bb-dim uppercase tracking-wider">Drawdown</span>
+              <span className={`font-bold stat-value ${drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-green"}`}>
+                {drawdownPct.toFixed(1)}%
+                <span className="text-bb-dim font-normal"> / {limitPct.toFixed(0)}%</span>
               </span>
             </div>
-            <div className="h-1.5 bg-bb-border">
+            <div className="h-2 bg-bb-border overflow-hidden">
               <div
-                className={`h-full transition-all ${
+                className={`h-full transition-all duration-500 ${
                   drawdownPct > 15 ? "bg-bb-red" : drawdownPct > 10 ? "bg-bb-amber" : "bg-bb-green"
                 }`}
                 style={{ width: `${Math.min(100, (drawdownPct / limitPct) * 100)}%` }}
@@ -100,34 +101,36 @@ export const CircuitBreaker = memo(function CircuitBreaker({
           </div>
 
           {/* Consecutive Losses */}
-          <div>
-            <div className="flex items-center justify-between text-[8px] mb-0.5">
-              <span className="text-bb-dim">CONSECUTIVE LOSSES</span>
-              <span className={consecutiveLosses >= 2 ? "text-bb-red" : "text-bb-dim"}>
+          <div className="bg-bb-raised p-2 border border-bb-border">
+            <div className="flex items-center justify-between text-[8px] mb-1.5">
+              <span className="text-bb-dim uppercase tracking-wider">Consecutive Losses</span>
+              <span className={`font-bold stat-value ${consecutiveLosses >= 2 ? "text-bb-red" : "text-bb-dim"}`}>
                 {consecutiveLosses} / {maxConsecutiveLosses}
               </span>
             </div>
-            <div className="flex gap-0.5">
+            <div className="flex gap-1">
               {Array.from({ length: maxConsecutiveLosses }).map((_, i) => (
                 <div
                   key={i}
-                  className={`flex-1 h-1.5 ${i < consecutiveLosses ? "bg-bb-red" : "bg-bb-border"}`}
+                  className={`flex-1 h-2 transition-colors ${
+                    i < consecutiveLosses ? "bg-bb-red" : "bg-bb-border"
+                  }`}
                 />
               ))}
             </div>
           </div>
 
           {/* Position Limit */}
-          <div>
-            <div className="flex items-center justify-between text-[8px] mb-0.5">
-              <span className="text-bb-dim">POSITION LIMIT</span>
-              <span className={posLimitPct > 80 ? "text-bb-amber" : "text-bb-dim"}>
+          <div className="bg-bb-raised p-2 border border-bb-border">
+            <div className="flex items-center justify-between text-[8px] mb-1.5">
+              <span className="text-bb-dim uppercase tracking-wider">Position Limit</span>
+              <span className={`font-bold stat-value ${posLimitPct > 80 ? "text-bb-amber" : "text-bb-cyan"}`}>
                 {posLimitPct.toFixed(0)}%
               </span>
             </div>
-            <div className="h-1.5 bg-bb-border">
+            <div className="h-2 bg-bb-border overflow-hidden">
               <div
-                className={`h-full transition-all ${posLimitPct > 80 ? "bg-bb-amber" : "bg-bb-cyan"}`}
+                className={`h-full transition-all duration-500 ${posLimitPct > 80 ? "bg-bb-amber" : "bg-bb-cyan"}`}
                 style={{ width: `${Math.min(100, posLimitPct)}%` }}
               />
             </div>

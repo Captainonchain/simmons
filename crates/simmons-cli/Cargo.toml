@@ -24,6 +24,7 @@ rust_decimal_macros = { workspace = true }
 chrono = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
+num-traits = "0.2"
 tracing-subscriber = { workspace = true }
 clap = { version = "4", features = ["derive"] }
 

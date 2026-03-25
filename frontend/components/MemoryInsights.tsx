@@ -66,10 +66,11 @@ export const MemoryInsights = memo(function MemoryInsights({
       <div className="grid-cell-header">
         <div className="flex items-center gap-2">
           <span className="grid-cell-title">MEMORY</span>
+          <span className="text-[8px] text-bb-dim">REFLECT</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[8px]">
-          <span className="text-bb-dim">{totalLearnings}</span>
-          <span className="text-bb-muted">|</span>
+        <div className="flex items-center gap-2 text-[8px]">
+          <span className="text-bb-cyan">{totalLearnings}</span>
+          <span className="text-bb-muted">/</span>
           <span className="text-bb-dim">{totalReflections}</span>
         </div>
       </div>
@@ -80,33 +81,34 @@ export const MemoryInsights = memo(function MemoryInsights({
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-1 text-[8px] uppercase transition-colors ${
-              tab === t ? "text-bb-orange bg-bb-raised" : "text-bb-dim hover:text-bb-white"
+            className={`flex-1 py-1.5 text-[8px] uppercase transition-all relative ${
+              tab === t ? "text-bb-orange bg-bb-raised" : "text-bb-dim hover:text-bb-white hover:bg-bb-raised/50"
             }`}
           >
             {t}
+            {tab === t && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-bb-orange" />}
           </button>
         ))}
       </div>
 
       <div className="flex-1 overflow-auto p-2">
         {tab === "stats" && (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {sortedAgents.map(([name, stats]) => (
-              <div key={name} className="bg-bb-raised border border-bb-border p-1.5">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-bb-cyan text-[9px]">{name}</span>
-                  <span className={`text-[10px] font-bold stat-value ${getAccuracyColor(stats.accuracy)}`}>
+              <div key={name} className="bg-bb-raised border border-bb-border p-2 hover:border-bb-border-light transition-colors">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-bb-cyan text-[9px] font-medium">{name}</span>
+                  <span className={`text-[11px] font-bold stat-value ${getAccuracyColor(stats.accuracy)}`}>
                     {(stats.accuracy * 100).toFixed(0)}%
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-[8px] text-bb-dim">
                     {stats.correctPredictions}/{stats.totalPredictions} correct
                   </span>
-                  <div className="w-12 h-1 bg-bb-border">
+                  <div className="w-16 h-1.5 bg-bb-border overflow-hidden">
                     <div
-                      className={`h-full ${stats.accuracy >= 0.5 ? "bg-bb-green" : "bg-bb-red"}`}
+                      className={`h-full transition-all ${getAccuracyColor(stats.accuracy).replace('text-', 'bg-')}`}
                       style={{ width: `${stats.accuracy * 100}%` }}
                     />
                   </div>
@@ -117,10 +119,10 @@ export const MemoryInsights = memo(function MemoryInsights({
         )}
 
         {tab === "lessons" && (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {recentLessons.map((lesson, i) => (
-              <div key={i} className="bg-bb-raised border border-bb-border p-1.5 text-[9px]">
-                <span className="text-bb-blue mr-1.5">•</span>
+              <div key={i} className="bg-bb-raised border border-bb-border p-2 text-[9px] hover:border-bb-blue/30 transition-colors">
+                <span className="text-bb-blue mr-2">→</span>
                 <span className="text-bb-white">{lesson}</span>
               </div>
             ))}
@@ -128,31 +130,29 @@ export const MemoryInsights = memo(function MemoryInsights({
         )}
 
         {tab === "patterns" && (
-          <div className="space-y-2">
-            {/* Winning */}
+          <div className="space-y-3">
+            {/* Winning Patterns */}
             <div>
-              <div className="text-[8px] text-bb-green uppercase tracking-wider mb-1">
-                WINNING PATTERNS
+              <div className="text-[8px] text-bb-green uppercase tracking-wider mb-1.5 font-medium">
+                ✓ Winning Patterns
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {winningPatterns.map((p, i) => (
-                  <div key={i} className="bg-bb-raised border border-bb-green/20 p-1 text-[8px]">
-                    <span className="text-bb-green mr-1">✓</span>
+                  <div key={i} className="bg-bb-raised border border-bb-green/20 p-1.5 text-[8px] hover:border-bb-green/40 transition-colors">
                     <span className="text-bb-white">{p}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Avoid */}
+            {/* Avoid Patterns */}
             <div>
-              <div className="text-[8px] text-bb-red uppercase tracking-wider mb-1">
-                AVOID PATTERNS
+              <div className="text-[8px] text-bb-red uppercase tracking-wider mb-1.5 font-medium">
+                ✗ Avoid Patterns
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {avoidPatterns.map((p, i) => (
-                  <div key={i} className="bg-bb-raised border border-bb-red/20 p-1 text-[8px]">
-                    <span className="text-bb-red mr-1">✗</span>
+                  <div key={i} className="bg-bb-raised border border-bb-red/20 p-1.5 text-[8px] hover:border-bb-red/40 transition-colors">
                     <span className="text-bb-white">{p}</span>
                   </div>
                 ))}

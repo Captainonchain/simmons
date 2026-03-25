@@ -11,7 +11,7 @@ interface PortfolioChartProps {
 function generateEquityCurve(equity: number, pnlPct: number): { time: number; value: number }[] {
   const now = Date.now();
   const points = 100;
-  const interval = 60000; // 1 min
+  const interval = 60000;
   const startEquity = equity / (1 + pnlPct / 100);
   const data: { time: number; value: number }[] = [];
 
@@ -41,7 +41,6 @@ export const PortfolioChart = memo(function PortfolioChart({ portfolio }: Portfo
   const data = useMemo(() => generateEquityCurve(equity, pnlPct), [equity, pnlPct]);
   const [animatedData, setAnimatedData] = useState<typeof data>([]);
 
-  // Animate in
   useEffect(() => {
     const timer = setTimeout(() => setAnimatedData(data), 50);
     return () => clearTimeout(timer);
@@ -57,49 +56,46 @@ export const PortfolioChart = memo(function PortfolioChart({ portfolio }: Portfo
           <span className="text-[8px] text-bb-dim">EQUITY CURVE</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-bb-bright font-bold text-[12px] stat-value">
+          <span className="text-bb-bright font-bold text-[13px] stat-value">
             ${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className={`text-[10px] stat-value ${isUp ? "text-bb-green" : "text-bb-red"}`}>
+          <span className={`text-[10px] stat-value px-1.5 py-0.5 ${isUp ? "text-bb-green bg-bb-green/10" : "text-bb-red bg-bb-red/10"}`}>
             {isUp ? "▲" : "▼"} {isUp ? "+" : ""}{pnl.toFixed(2)} ({pnlPct.toFixed(2)}%)
           </span>
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-bb-border bg-bb-panel text-[9px] shrink-0">
-        <div className="flex items-center gap-4">
+      {/* Stats Row */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-bb-border bg-bb-panel text-[9px] shrink-0">
+        <div className="flex items-center gap-5">
           <div>
-            <span className="text-bb-dim">Capital: </span>
-            <span className="text-bb-white stat-value">${capital.toLocaleString()}</span>
+            <span className="text-bb-dim">Capital </span>
+            <span className="text-bb-white stat-value font-medium">${capital.toLocaleString()}</span>
           </div>
           <div>
-            <span className="text-bb-dim">Sharpe: </span>
-            <span className={sharpe >= 1 ? "text-bb-green" : sharpe >= 0 ? "text-bb-amber" : "text-bb-red"}>
+            <span className="text-bb-dim">Sharpe </span>
+            <span className={`font-medium ${sharpe >= 1 ? "text-bb-green" : sharpe >= 0 ? "text-bb-amber" : "text-bb-red"}`}>
               {sharpe.toFixed(2)}
             </span>
           </div>
           <div>
-            <span className="text-bb-dim">Win Rate: </span>
-            <span className={winRate >= 50 ? "text-bb-green" : "text-bb-red"}>
+            <span className="text-bb-dim">WR </span>
+            <span className={`font-medium ${winRate >= 50 ? "text-bb-green" : "text-bb-red"}`}>
               {winRate.toFixed(0)}%
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-sm ${isUp ? "bg-bb-green" : "bg-bb-red"}`} />
-          <span className={`text-[8px] font-medium ${isUp ? "text-bb-green" : "text-bb-red"}`}>
-            {isUp ? "PROFIT" : "LOSS"}
-          </span>
+        <div className={`px-2 py-0.5 text-[8px] font-bold ${isUp ? "bg-bb-green/15 text-bb-green" : "bg-bb-red/15 text-bb-red"}`}>
+          {isUp ? "▲ PROFIT" : "▼ LOSS"}
         </div>
       </div>
 
       <div className="flex-1 min-h-0 p-1">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={animatedData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+          <AreaChart data={animatedData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={isUp ? "#00DD55" : "#FF2222"} stopOpacity={0.25} />
+                <stop offset="0%" stopColor={isUp ? "#00DD55" : "#FF2222"} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={isUp ? "#00DD55" : "#FF2222"} stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -109,17 +105,17 @@ export const PortfolioChart = memo(function PortfolioChart({ portfolio }: Portfo
               tick={{ fill: "#555", fontSize: 8, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
-              width={45}
+              width={50}
               tickFormatter={(v) => `$${v.toFixed(0)}`}
             />
             <Tooltip
               contentStyle={{
-                background: "#0a0a0a",
-                border: "1px solid #1a1a1a",
+                background: "#080808",
+                border: "1px solid #222",
                 fontSize: 9,
                 fontFamily: "IBM Plex Mono",
-                color: "#bbb",
-                padding: "4px 8px",
+                color: "#aaa",
+                padding: "6px 10px",
               }}
               formatter={(v: number) => [`$${v.toFixed(2)}`, "Equity"]}
               labelFormatter={() => ""}

@@ -34,33 +34,38 @@ export const StatsBar = memo(function StatsBar({
 
   const getRegimeColor = (r: string) => {
     const lower = r.toLowerCase();
-    if (lower.includes("bull") || lower.includes("trend")) return "text-bb-green";
-    if (lower.includes("bear") || lower.includes("crash")) return "text-bb-red";
-    if (lower.includes("volatile") || lower.includes("chop")) return "text-bb-amber";
-    return "text-bb-cyan";
+    if (lower.includes("bull") || lower.includes("trend") || lower.includes("up")) return "text-bb-green bg-bb-green/10 border-bb-green/30";
+    if (lower.includes("bear") || lower.includes("crash") || lower.includes("down")) return "text-bb-red bg-bb-red/10 border-bb-red/30";
+    if (lower.includes("volatile") || lower.includes("chop") || lower.includes("high")) return "text-bb-amber bg-bb-amber/10 border-bb-amber/30";
+    return "text-bb-cyan bg-bb-cyan/10 border-bb-cyan/30";
   };
 
   return (
-    <div className="bg-bb-surface h-10 border-b border-bb-border flex items-stretch shrink-0">
-      {/* Equity */}
-      <div className="flex items-center gap-3 px-4 border-r border-bb-border">
+    <div className="bg-bb-surface h-11 border-b border-bb-border flex items-stretch shrink-0">
+      {/* Equity + P&L */}
+      <div className="flex items-center gap-4 px-4 border-r border-bb-border min-w-[200px]">
         <div>
-          <div className="text-[8px] text-bb-dim tracking-wider">EQUITY</div>
-          <div className="text-bb-bright font-bold text-sm stat-value leading-none">
+          <div className="text-[7px] text-bb-dim tracking-widest uppercase">EQUITY</div>
+          <div className="text-bb-bright font-bold text-[15px] stat-value leading-none">
             ${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
-        <div className={`text-[11px] font-medium stat-value ${isUp ? "text-bb-green" : "text-bb-red"}`}>
-          {isUp ? "▲" : "▼"} {isUp ? "+" : ""}{pnl.toFixed(2)} ({pnlPct.toFixed(2)}%)
+        <div className={`px-2 py-1 border ${isUp ? "bg-bb-green/10 border-bb-green/30" : "bg-bb-red/10 border-bb-red/30"}`}>
+          <div className={`text-[11px] font-bold stat-value ${isUp ? "text-bb-green" : "text-bb-red"}`}>
+            {isUp ? "+" : ""}{pnl.toFixed(2)}
+          </div>
+          <div className={`text-[8px] stat-value ${isUp ? "text-bb-green/70" : "text-bb-red/70"}`}>
+            {isUp ? "+" : ""}{pnlPct.toFixed(2)}%
+          </div>
         </div>
       </div>
 
       {/* Win Rate */}
       <div className="flex items-center px-4 border-r border-bb-border">
         <div>
-          <div className="text-[8px] text-bb-dim tracking-wider">WIN RATE</div>
-          <div className="flex items-baseline gap-1.5">
-            <span className={`font-bold text-sm stat-value leading-none ${winRate >= 50 ? "text-bb-green" : "text-bb-red"}`}>
+          <div className="text-[7px] text-bb-dim tracking-widest uppercase">WIN RATE</div>
+          <div className="flex items-baseline gap-2">
+            <span className={`font-bold text-[15px] stat-value leading-none ${winRate >= 50 ? "text-bb-green" : "text-bb-red"}`}>
               {winRate.toFixed(0)}%
             </span>
             <span className="text-[9px] text-bb-dim">{totalTrades} trades</span>
@@ -71,12 +76,12 @@ export const StatsBar = memo(function StatsBar({
       {/* Regime */}
       <div className="flex items-center px-4 border-r border-bb-border">
         <div>
-          <div className="text-[8px] text-bb-dim tracking-wider">REGIME</div>
-          <div className="flex items-baseline gap-2">
-            <span className={`font-bold text-sm leading-none uppercase ${getRegimeColor(regime)}`}>
+          <div className="text-[7px] text-bb-dim tracking-widest uppercase">REGIME</div>
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${getRegimeColor(regime)}`}>
               {regime}
             </span>
-            <span className="text-[9px] text-bb-dim">VOL {volatility.toFixed(2)}</span>
+            <span className="text-[9px] text-bb-dim">σ {volatility.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -84,28 +89,32 @@ export const StatsBar = memo(function StatsBar({
       {/* Kelly Size */}
       <div className="flex items-center px-4 border-r border-bb-border">
         <div>
-          <div className="text-[8px] text-bb-dim tracking-wider">KELLY SIZE</div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-bb-cyan font-bold text-sm stat-value leading-none">
+          <div className="text-[7px] text-bb-dim tracking-widest uppercase">KELLY SIZE</div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-bb-cyan font-bold text-[15px] stat-value leading-none">
               {kellySizePct.toFixed(0)}%
             </span>
-            <span className="text-[9px] text-bb-dim">½K</span>
+            <span className="text-[8px] text-bb-dim">½K</span>
           </div>
         </div>
       </div>
 
-      {/* Drawdown meter */}
+      {/* Drawdown Meter */}
       <div className="flex items-center px-4 flex-1">
-        <div className="w-full">
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[8px] text-bb-dim tracking-wider">DRAWDOWN</span>
-            <span className={`text-[10px] stat-value ${drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-dim"}`}>
+        <div className="w-full max-w-[300px]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[7px] text-bb-dim tracking-widest uppercase">DRAWDOWN</span>
+            <span className={`text-[10px] font-medium stat-value ${drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-green"}`}>
               {drawdownPct.toFixed(1)}% / {maxDdPct.toFixed(0)}%
             </span>
           </div>
-          <div className="h-1.5 bg-bb-border rounded-none overflow-hidden">
+          <div className="h-2 bg-bb-border overflow-hidden relative">
+            {/* Threshold markers */}
+            <div className="absolute top-0 bottom-0 left-[50%] w-px bg-bb-amber/50" />
+            <div className="absolute top-0 bottom-0 left-[75%] w-px bg-bb-red/50" />
+            {/* Fill bar */}
             <div
-              className={`h-full transition-all duration-300 ${
+              className={`h-full transition-all duration-500 ${
                 drawdownPct > 15 ? "bg-bb-red" : drawdownPct > 10 ? "bg-bb-amber" : "bg-bb-green"
               }`}
               style={{ width: `${Math.min(100, drawdownRatio * 100)}%` }}

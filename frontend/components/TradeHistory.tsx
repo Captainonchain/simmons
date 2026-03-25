@@ -90,13 +90,13 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
   const getOutcomeStyle = (outcome: string) => {
     switch (outcome) {
       case "win":
-        return { color: "text-bb-green", bg: "border-bb-green/30" };
+        return { color: "text-bb-green", bg: "border-l-bb-green", badge: "bg-bb-green/15 border-bb-green/30" };
       case "loss":
-        return { color: "text-bb-red", bg: "border-bb-red/30" };
+        return { color: "text-bb-red", bg: "border-l-bb-red", badge: "bg-bb-red/15 border-bb-red/30" };
       case "open":
-        return { color: "text-bb-cyan", bg: "border-bb-cyan/30" };
+        return { color: "text-bb-cyan", bg: "border-l-bb-cyan", badge: "bg-bb-cyan/15 border-bb-cyan/30" };
       default:
-        return { color: "text-bb-dim", bg: "border-bb-border" };
+        return { color: "text-bb-dim", bg: "border-l-bb-border", badge: "bg-bb-surface border-bb-border" };
     }
   };
 
@@ -119,14 +119,14 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
           <span className="grid-cell-title">TRADE HISTORY</span>
           <span className="text-[8px] text-bb-dim">{stats.total} total</span>
         </div>
-        <div className="flex items-center gap-1 text-[8px]">
-          <span className="text-bb-green">{stats.wins}W</span>
-          <span className="text-bb-dim">/</span>
-          <span className="text-bb-red">{stats.losses}L</span>
+        <div className="flex items-center gap-2 text-[8px]">
+          <span className="text-bb-green font-medium">{stats.wins}W</span>
+          <span className="text-bb-muted">/</span>
+          <span className="text-bb-red font-medium">{stats.losses}L</span>
           {stats.open > 0 && (
             <>
-              <span className="text-bb-dim">/</span>
-              <span className="text-bb-cyan">{stats.open}O</span>
+              <span className="text-bb-muted">/</span>
+              <span className="text-bb-cyan font-medium">{stats.open}O</span>
             </>
           )}
         </div>
@@ -138,11 +138,12 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`flex-1 py-1 text-[8px] uppercase transition-colors ${
-              filter === f ? "text-bb-orange bg-bb-raised" : "text-bb-dim hover:text-bb-white"
+            className={`flex-1 py-1.5 text-[8px] uppercase transition-all relative ${
+              filter === f ? "text-bb-orange bg-bb-raised" : "text-bb-dim hover:text-bb-white hover:bg-bb-raised/50"
             }`}
           >
             {f}
+            {filter === f && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-bb-orange" />}
           </button>
         ))}
       </div>
@@ -159,44 +160,42 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
               const isExpanded = expandedId === trade.id;
 
               return (
-                <div key={trade.id} className="bg-bb-surface hover:bg-bb-raised transition-colors">
+                <div key={trade.id} className="bg-bb-surface hover:bg-bb-raised/50 transition-colors">
                   {/* Summary Row */}
                   <div
-                    className={`px-2 py-1.5 flex items-center justify-between cursor-pointer border-l-2 ${style.bg}`}
+                    className={`px-3 py-2 flex items-center justify-between cursor-pointer border-l-2 ${style.bg}`}
                     onClick={() => setExpandedId(isExpanded ? null : trade.id)}
                   >
                     <div className="flex items-center gap-2">
-                      <span className={trade.side === "long" ? "text-bb-green" : "text-bb-red"}>
+                      <span className={`text-[10px] ${trade.side === "long" ? "text-bb-green" : "text-bb-red"}`}>
                         {trade.side === "long" ? "▲" : "▼"}
                       </span>
-                      <span className="text-bb-white text-[10px] font-medium">
+                      <span className="text-bb-bright text-[10px] font-medium">
                         {trade.symbol.replace("-USDT", "")}
                       </span>
-                      <span className={`text-[8px] uppercase ${style.color}`}>
+                      <span className={`text-[8px] px-1.5 py-0.5 uppercase font-medium border ${style.badge} ${style.color}`}>
                         {trade.outcome}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {trade.pnl !== undefined && (
-                        <span className={`text-[10px] stat-value ${trade.pnl >= 0 ? "text-bb-green" : "text-bb-red"}`}>
+                        <span className={`text-[10px] stat-value font-medium ${trade.pnl >= 0 ? "text-bb-green" : "text-bb-red"}`}>
                           {trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(0)}
-                          {trade.pnlPct !== undefined && (
-                            <span className="text-bb-dim ml-0.5">
-                              ({trade.pnlPct >= 0 ? "+" : ""}{trade.pnlPct.toFixed(1)}%)
-                            </span>
-                          )}
+                          <span className="text-bb-dim font-normal ml-1">
+                            ({trade.pnlPct !== undefined ? (trade.pnlPct >= 0 ? "+" : "") + trade.pnlPct.toFixed(1) + "%" : ""})
+                          </span>
                         </span>
                       )}
                       <span className="text-[8px] text-bb-dim">{formatTime(trade.openedAt)}</span>
-                      <span className="text-[8px] text-bb-muted">{isExpanded ? "−" : "+"}</span>
+                      <span className="text-[10px] text-bb-muted w-3 text-center">{isExpanded ? "−" : "+"}</span>
                     </div>
                   </div>
 
                   {/* Expanded Details */}
                   {isExpanded && (
-                    <div className="px-2 py-2 bg-bb-raised border-t border-bb-border space-y-2 slide-in">
+                    <div className="px-3 py-2 bg-bb-raised border-t border-bb-border space-y-2 slide-in">
                       {/* Prices */}
-                      <div className="grid grid-cols-2 gap-2 text-[9px]">
+                      <div className="grid grid-cols-2 gap-3 text-[9px]">
                         <div>
                           <span className="text-bb-dim">Entry: </span>
                           <span className="text-bb-white stat-value">${trade.entryPrice.toLocaleString()}</span>
@@ -210,7 +209,7 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
                       </div>
 
                       {/* Reasoning */}
-                      <div className="text-[9px]">
+                      <div className="text-[9px] bg-bb-surface p-2 border border-bb-border">
                         <span className="text-bb-dim">Reason: </span>
                         <span className="text-bb-white">{trade.reasoning}</span>
                       </div>
@@ -218,15 +217,15 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
                       {/* Agent Votes */}
                       {trade.agentVotes && trade.agentVotes.length > 0 && (
                         <div>
-                          <div className="text-[8px] text-bb-dim mb-1">AGENT VOTES</div>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="text-[8px] text-bb-dim mb-1.5 uppercase tracking-wider">Agent Votes</div>
+                          <div className="flex flex-wrap gap-1.5">
                             {trade.agentVotes.map((v, i) => (
                               <div
                                 key={i}
-                                className="bg-bb-surface border border-bb-border px-1.5 py-0.5 text-[8px]"
+                                className="bg-bb-surface border border-bb-border px-2 py-1 text-[8px]"
                               >
                                 <span className="text-bb-cyan">{v.agent}</span>
-                                <span className="text-bb-dim mx-1">→</span>
+                                <span className="text-bb-muted mx-1">→</span>
                                 <span
                                   className={
                                     v.recommendation.includes("BUY") || v.recommendation.includes("LONG")
@@ -238,7 +237,7 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
                                 >
                                   {v.recommendation}
                                 </span>
-                                <span className="text-bb-muted ml-1">
+                                <span className="text-bb-dim ml-1">
                                   {(v.confidence * 100).toFixed(0)}%
                                 </span>
                               </div>
