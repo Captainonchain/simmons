@@ -1,0 +1,86 @@
+# Simmons Testnet Configuration
+# Uses OnchainOS agentic wallet for DEX execution
+# Safe for testing with small amounts
+
+mode = "live"  # Actually executes trades via OnchainOS
+testnet = true  # Use testnet chains where available
+
+# Start small for testing
+capital_usd = 50
+symbols = [
+    "SOL-USDC",   # Solana DEX
+    "ETH-USDC",   # Base/ETH DEX
+]
+
+# OnchainOS Agentic Wallet addresses (auto-populated from login)
+[wallet]
+solana = "ADgiAMEyksesoUjrza4Bc5VH4LqyDkFKyafCMJA5ZS6h"
+evm = "0x328314bc40e7ef6c42eafd776341ab55631b163f"
+
+# Chains to trade on
+[chains]
+enabled = ["solana", "base"]  # Start with these two
+solana_chain_id = "501"
+base_chain_id = "8453"
+ethereum_chain_id = "1"
+
+# Conservative risk settings for testnet
+[risk]
+max_position_pct = 0.20       # 20% max per position (larger for testing)
+max_drawdown = 0.30           # 30% max drawdown (more lenient for testing)
+kelly_fraction = 0.10         # 10% Kelly (conservative)
+daily_loss_limit = 25         # $25 daily loss limit
+default_stop_loss_pct = 0.05  # 5% stop loss
+default_take_profit_pct = 0.10 # 10% take profit
+max_positions = 2             # Max 2 concurrent positions
+max_consecutive_losses = 5    # More lenient for testing
+
+[feeds]
+okx_ws_url = "wss://ws.okx.com:8443/ws/v5/public"
+price_window_size = 100
+update_interval_ms = 5000
+
+[alpha]
+momentum_lookback = 14
+rsi_period = 14
+rsi_overbought = 70
+rsi_oversold = 30
+zscore_threshold = 2
+min_confidence = 0.55         # Lower threshold for more testing opportunities
+
+[execution]
+use_onchainos_cli = true      # Use OnchainOS CLI for execution
+max_slippage_bps = 100        # 1% slippage (more lenient for testing)
+mev_protection = true
+preferred_venues = ["onchainos"]
+
+# Gas settings
+[execution.gas]
+solana_priority_fee = "auto"  # Auto-adjust priority fee
+evm_gas_multiplier = 1.2      # 20% buffer on gas estimates
+
+[brain]
+data_dir = "data"
+timeout_secs = 60
+auto_invoke = false           # Manual invoke for testing
+
+# TA Brain settings
+[ta_brain]
+update_interval_secs = 30
+radar_elite_threshold = 250
+radar_solid_threshold = 170
+radar_marginal_threshold = 140
+
+# Fund Brain settings
+[fund_brain]
+update_interval_secs = 60
+onchain_weight = 0.5
+twitter_weight = 0.3
+news_weight = 0.2
+
+# Consensus settings
+[consensus]
+ta_weight = 0.6
+fund_weight = 0.4
+min_confidence = 0.50
+conflict_reduces_size = true
