@@ -18,6 +18,10 @@ import { FeedbackLoop } from "@/components/FeedbackLoop";
 import { Headlines } from "@/components/Headlines";
 import { PortfolioGrowth } from "@/components/PortfolioGrowth";
 import { DashboardGrid } from "@/components/DashboardGrid";
+import { AgentDebate } from "@/components/AgentDebate";
+import { MemoryInsights } from "@/components/MemoryInsights";
+import { CircuitBreaker } from "@/components/CircuitBreaker";
+import { TradeHistory } from "@/components/TradeHistory";
 
 export default function Dashboard() {
   const { data, isConnected } = useWebSocket();
@@ -56,6 +60,81 @@ export default function Dashboard() {
     infra: <XLayerInfra infra={l?.infrastructure ?? null} />,
     feedback: <FeedbackLoop feedback={l?.feedback ?? null} />,
     headlines: <Headlines />,
+    // New v2.0 components
+    agentDebate: (
+      <AgentDebate
+        bullConviction={0.77}
+        bearConviction={0.58}
+        finalDecision="BUY"
+        agentVotes={[
+          { agent: "Technical", recommendation: "BUY", confidence: 0.72, reason: "MACD crossover, RSI oversold" },
+          { agent: "Fundamental", recommendation: "HOLD", confidence: 0.68, reason: "Fair valuation" },
+          { agent: "Sentiment", recommendation: "BUY", confidence: 0.72, reason: "Smart money accumulating" },
+          { agent: "On-chain", recommendation: "BUY", confidence: 0.88, reason: "No security concerns" },
+          { agent: "Bull Researcher", recommendation: "LONG", confidence: 0.77, reason: "Multi-factor convergence" },
+          { agent: "Bear Researcher", recommendation: "CAUTION", confidence: 0.58, reason: "MACD not confirmed" },
+          { agent: "Neutral Risk", recommendation: "12%", confidence: 0.72, reason: "Balanced position" },
+        ]}
+      />
+    ),
+    memory: (
+      <MemoryInsights
+        totalLearnings={12}
+        totalReflections={5}
+        agentStats={{
+          technical_analyst: { total_predictions: 10, correct_predictions: 7, accuracy: 0.7 },
+          sentiment_analyst: { total_predictions: 10, correct_predictions: 8, accuracy: 0.8 },
+          onchain_analyst: { total_predictions: 8, correct_predictions: 7, accuracy: 0.875 },
+        }}
+        recentLessons={[
+          "RSI below 30 with volume spike leads to reversal",
+          "Smart money accumulation confirms technical signals",
+          "Reduce size when MACD not confirmed",
+        ]}
+        winningPatterns={[
+          "Oversold RSI + smart money buying",
+          "Volume spike at support level",
+        ]}
+        avoidPatterns={[
+          "Trading against whale distribution",
+          "Entering during choppy regime",
+        ]}
+      />
+    ),
+    circuitBreaker: (
+      <CircuitBreaker
+        triggered={false}
+        riskLevel="normal"
+        currentDrawdown={0.03}
+        maxDrawdownLimit={0.20}
+        consecutiveLosses={0}
+        maxConsecutiveLosses={3}
+        positionSizeModifier={1.0}
+        canTrade={true}
+        recommendations={["Normal trading permitted"]}
+      />
+    ),
+    tradeHistory: (
+      <TradeHistory
+        trades={[
+          {
+            id: "trade_001",
+            symbol: "BTC-USDT",
+            side: "long",
+            entryPrice: 67250,
+            exitPrice: undefined,
+            outcome: "open",
+            openedAt: new Date().toISOString(),
+            reasoning: "Multi-agent consensus: 3/4 analysts BUY",
+            agentVotes: [
+              { agent: "Technical", recommendation: "BUY", confidence: 0.72 },
+              { agent: "Sentiment", recommendation: "BUY", confidence: 0.72 },
+              { agent: "On-chain", recommendation: "BUY", confidence: 0.88 },
+            ],
+          },
+        ]}
+      />
+    ),
   };
 
   return (

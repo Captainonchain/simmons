@@ -425,6 +425,8 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         .route("/api/ai/regime", get(regime_handler))
         .route("/api/risk/portfolio", get(portfolio_handler))
         .route("/api/risk/positions", get(positions_handler))
+        .route("/api/risk/circuit-breaker", get(circuit_breaker_handler))
+        .route("/api/memory", get(memory_handler))
         .route("/api/brain/decide", post(decide_handler))
         .route("/api/brain/state", get(brain_state_handler))
         .route("/ws", get(ws_handler))
@@ -840,6 +842,76 @@ async fn brain_state_handler(State(state): State<Arc<AppState>>) -> impl IntoRes
             "total_trades": 0, "wins": 0, "losses": 0, "total_pnl": "0"
         })).into_response(),
     }
+}
+
+async fn circuit_breaker_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let snapshot = state.portfolio.snapshot();
+    let drawdown = snapshot.drawdown;
+    let consecutive_losses = state.brain.load_state().map(|s| {
+        // Count recent losses from trades
+        0u32 // Placeholder
+    }).unwrap_or(0);
+
+    let risk_level = if drawdown > dec!(0.15) || consecutive_losses >= 3 {
+        "critical"
+    } else if drawdown > dec!(0.10) || consecutive_losses >= 2 {
+        "elevated"
+    } else {
+        "normal"
+    };
+
+    let triggered = consecutive_losses >= 3 || drawdown > dec!(0.20);
+    let can_trade = !triggered && risk_level != "critical";
+
+    let position_modifier = match risk_level {
+        "critical" => 0.0,
+        "elevated" => 0.5,
+        _ => 1.0,
+    };
+
+    Json(serde_json::json!({
+        "triggered": triggered,
+        "reason": if triggered { "Risk limits exceeded" } else { "" },
+        "risk_level": risk_level,
+        "current_drawdown": drawdown.to_string().parse::<f64>().unwrap_or(0.0),
+        "max_drawdown_limit": 0.20,
+        "consecutive_losses": consecutive_losses,
+        "max_consecutive_losses": 3,
+        "position_size_modifier": position_modifier,
+        "can_trade": can_trade,
+        "recommendations": if can_trade {
+            vec!["Normal trading permitted"]
+        } else {
+            vec!["Stop trading - risk limits exceeded", "Review recent losses"]
+        }
+    }))
+}
+
+async fn memory_handler(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    // Return memory snapshot from file or default
+    let memory_path = "data/memory.json";
+    let memory: serde_json::Value = if std::path::Path::new(memory_path).exists() {
+        match std::fs::read_to_string(memory_path) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_else(|_| default_memory()),
+            Err(_) => default_memory(),
+        }
+    } else {
+        default_memory()
+    };
+
+    Json(memory)
+}
+
+fn default_memory() -> serde_json::Value {
+    serde_json::json!({
+        "total_learnings": 0,
+        "total_reflections": 0,
+        "agent_stats": {},
+        "recent_lessons": [],
+        "avoid_patterns": [],
+        "winning_patterns": [],
+        "last_updated": null
+    })
 }
 
 async fn ws_handler(

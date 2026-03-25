@@ -1,0 +1,38 @@
+[package]
+name = "simmons-mcp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "MCP server for Simmons trading engine"
+
+[dependencies]
+# Internal crates
+simmons-core = { workspace = true }
+simmons-alpha = { workspace = true }
+simmons-risk = { workspace = true }
+
+# MCP SDK
+rmcp = { version = "0.3", features = ["server", "transport-io"] }
+schemars = "1.0"
+
+# Async
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Math
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Utils
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+parking_lot = { workspace = true }
+uuid = { workspace = true }
