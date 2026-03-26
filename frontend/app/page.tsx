@@ -13,6 +13,7 @@ import { TradeHistory } from "@/components/TradeHistory";
 import { MemoryInsights } from "@/components/MemoryInsights";
 import { PortfolioChart } from "@/components/PortfolioChart";
 import { DualBrainArchitecture } from "@/components/DualBrainArchitecture";
+import { OpenPositions } from "@/components/OpenPositions";
 
 // Types for API data
 interface Trade {
@@ -289,12 +290,28 @@ export default function Dashboard() {
           {/* CENTER COLUMN - Decision & Execution (5 cols) */}
           <div className="col-span-5 flex flex-col gap-px">
             {/* Agent Debate - Multi-agent decision making */}
-            <div className="h-[50%] min-h-0">
+            <div className="h-[35%] min-h-0">
               <AgentDebate
                 bullConviction={nunchi?.score ?? 0.65}
                 bearConviction={1 - (nunchi?.score ?? 0.65)}
                 finalDecision={nunchi?.direction === "Bullish" ? "BUY" : nunchi?.direction === "Bearish" ? "SELL" : "HOLD"}
                 agentVotes={agentVotes.length > 0 ? agentVotes : undefined}
+                isLive={isConnected}
+              />
+            </div>
+            {/* Open Positions - Current holdings */}
+            <div className="h-[30%] min-h-0">
+              <OpenPositions
+                positions={(l?.decision_risk.positions ?? []).map((p: { symbol: string; side: string; entry_price: number; current_price: number; size_pct: number; pnl: number; pnl_pct: number; opened_at: string }) => ({
+                  symbol: p.symbol,
+                  side: p.side as "long" | "short",
+                  entry_price: p.entry_price,
+                  current_price: p.current_price,
+                  size_pct: p.size_pct,
+                  pnl: p.pnl,
+                  pnl_pct: p.pnl_pct,
+                  opened_at: p.opened_at,
+                }))}
                 isLive={isConnected}
               />
             </div>

@@ -93,6 +93,8 @@ pub struct DualBrainState {
     pub last_update: i64,
     /// Error count
     pub error_count: u32,
+    /// Active positions (symbol -> trade_id)
+    pub active_positions: HashMap<String, String>,
 }
 
 impl Default for DualBrainState {
@@ -103,6 +105,7 @@ impl Default for DualBrainState {
             running: false,
             last_update: 0,
             error_count: 0,
+            active_positions: HashMap::new(),
         }
     }
 }
@@ -217,6 +220,11 @@ impl DualBrainLoop {
                     ctx.merged_sentiment,
                     ctx.merged_confidence * dec!(100)
                 );
+
+                // Auto-execute if enabled and action is tradeable
+                if self.config.auto_invoke && ctx.consensus_action.is_actionable() {
+                    self.auto_execute_trade(symbol, ctx).await?;
+                }
             }
         }
 
@@ -507,6 +515,107 @@ impl DualBrainLoop {
         }
 
         summary
+    }
+
+    /// Auto-execute a trade based on consensus
+    async fn auto_execute_trade(&mut self, symbol: &str, ctx: &MergedContext) -> Result<()> {
+        // Skip if we already have a position in this symbol (check state)
+        {
+            let state = self.state.read().await;
+            if state.active_positions.contains_key(symbol) {
+                debug!("[AutoTrade] Skipping {} - already have position", symbol);
+                return Ok(());
+            }
+        }
+
+        // Determine trade side
+        let side = match ctx.consensus_action {
+            ConsensusAction::Long => "long",
+            ConsensusAction::Short => "short",
+            _ => return Ok(()), // Not a trade action
+        };
+
+        // Calculate position size
+        let size_pct = (ctx.size_factor * dec!(0.1)).to_f64().unwrap_or(0.05); // Max 10%
+        let size_pct = size_pct.max(0.02).min(0.15); // Between 2% and 15%
+
+        // Get current price from aggregator (last price in history)
+        let price = self.aggregator
+            .get_prices(symbol)
+            .and_then(|prices| prices.last().copied())
+            .unwrap_or(dec!(0));
+        if price == dec!(0) {
+            warn!("[AutoTrade] No price for {}", symbol);
+            return Ok(());
+        }
+
+        // Create trade record
+        let trade_id = format!("auto_{}", Utc::now().timestamp_millis());
+        let reasoning = format!(
+            "{} shows {:?} setup: Sentiment {:.2}, Confidence {:.0}%, RADAR {}, Regime {:?}. {}",
+            symbol,
+            ctx.consensus_action,
+            ctx.merged_sentiment,
+            ctx.merged_confidence * dec!(100),
+            ctx.ta.radar_score.score,
+            ctx.ta.radar_score.tier,
+            if ctx.is_conflict {
+                format!("Conflict: {}. ", ctx.conflict_reason.as_deref().unwrap_or("unknown"))
+            } else {
+                String::new()
+            }
+        );
+
+        info!(
+            "[AutoTrade] {} {} @ {} | Size: {:.1}% | {}",
+            side.to_uppercase(),
+            symbol,
+            price,
+            size_pct * 100.0,
+            reasoning
+        );
+
+        // Submit to API
+        let client = reqwest::Client::new();
+        let trade_request = serde_json::json!({
+            "id": trade_id,
+            "symbol": symbol,
+            "side": side,
+            "entry_price": price.to_f64().unwrap_or(0.0),
+            "size_pct": size_pct,
+            "reasoning": reasoning,
+            "status": "open",
+            "timestamp": Utc::now().to_rfc3339(),
+        });
+
+        match client
+            .post("http://localhost:3456/api/brain/decide")
+            .json(&serde_json::json!({
+                "decision": "trade",
+                "symbol": symbol,
+                "side": side,
+                "size_pct": size_pct,
+                "reasoning": reasoning,
+            }))
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    info!("[AutoTrade] Trade submitted successfully: {}", trade_id);
+                    // Track active position
+                    let mut state = self.state.write().await;
+                    state.active_positions.insert(symbol.to_string(), trade_id);
+                } else {
+                    warn!("[AutoTrade] Trade submission failed: {:?}", resp.status());
+                }
+            }
+            Err(e) => {
+                error!("[AutoTrade] Failed to submit trade: {}", e);
+            }
+        }
+
+        Ok(())
     }
 }
 
