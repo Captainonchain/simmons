@@ -13,6 +13,7 @@ interface StatsBarProps {
   kellySizePct: number;
   drawdown: number;
   maxDrawdown: number;
+  compact?: boolean;
 }
 
 export const StatsBar = memo(function StatsBar({
@@ -26,6 +27,7 @@ export const StatsBar = memo(function StatsBar({
   kellySizePct,
   drawdown,
   maxDrawdown,
+  compact = false,
 }: StatsBarProps) {
   const isUp = pnl >= 0;
   const drawdownPct = drawdown * 100;
@@ -40,6 +42,61 @@ export const StatsBar = memo(function StatsBar({
     return "text-bb-cyan bg-bb-cyan/10 border-bb-cyan/30";
   };
 
+  // Compact mode - inline stats for tab bar
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 text-[9px]">
+        {/* Equity + P&L */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-bb-dim">EQ</span>
+          <span className="text-bb-bright font-bold">
+            ${equity.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </span>
+          <span className={`font-bold ${isUp ? "text-bb-green" : "text-bb-red"}`}>
+            {isUp ? "+" : ""}{pnlPct.toFixed(1)}%
+          </span>
+        </div>
+
+        <div className="w-px h-3 bg-bb-border" />
+
+        {/* Win Rate */}
+        <div className="flex items-center gap-1">
+          <span className="text-bb-dim">WR</span>
+          <span className={`font-bold ${winRate >= 50 ? "text-bb-green" : "text-bb-red"}`}>
+            {winRate.toFixed(0)}%
+          </span>
+          <span className="text-bb-dim">({totalTrades})</span>
+        </div>
+
+        <div className="w-px h-3 bg-bb-border" />
+
+        {/* Regime */}
+        <span className={`px-1.5 py-0.5 text-[8px] font-bold uppercase border ${getRegimeColor(regime)}`}>
+          {regime}
+        </span>
+
+        <div className="w-px h-3 bg-bb-border" />
+
+        {/* Kelly */}
+        <div className="flex items-center gap-1">
+          <span className="text-bb-dim">K</span>
+          <span className="text-bb-cyan font-bold">{kellySizePct.toFixed(0)}%</span>
+        </div>
+
+        <div className="w-px h-3 bg-bb-border" />
+
+        {/* Drawdown */}
+        <div className="flex items-center gap-1">
+          <span className="text-bb-dim">DD</span>
+          <span className={`font-bold ${drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-green"}`}>
+            {drawdownPct.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Full mode
   return (
     <div className="bg-bb-surface h-11 border-b border-bb-border flex items-stretch shrink-0">
       {/* Equity + P&L */}

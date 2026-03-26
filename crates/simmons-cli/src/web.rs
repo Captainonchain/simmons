@@ -429,6 +429,7 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         .route("/api/memory", get(memory_handler))
         .route("/api/brain/decide", post(decide_handler))
         .route("/api/brain/state", get(brain_state_handler))
+        .route("/api/brain/dual-context", get(dual_brain_context_handler))
         .route("/api/trades", get(trades_handler))
         .route("/ws", get(ws_handler))
         .fallback_service(
@@ -846,6 +847,35 @@ async fn brain_state_handler(State(state): State<Arc<AppState>>) -> impl IntoRes
         Err(_) => Json(serde_json::json!({
             "total_trades": 0, "wins": 0, "losses": 0, "total_pnl": "0"
         })).into_response(),
+    }
+}
+
+async fn dual_brain_context_handler(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    let context_path = "data/dual_brain_context.json";
+    if std::path::Path::new(context_path).exists() {
+        match std::fs::read_to_string(context_path) {
+            Ok(content) => {
+                match serde_json::from_str::<serde_json::Value>(&content) {
+                    Ok(data) => Json(data).into_response(),
+                    Err(_) => Json(serde_json::json!({
+                        "error": "Invalid JSON",
+                        "contexts": {},
+                        "mode": "paper"
+                    })).into_response(),
+                }
+            }
+            Err(_) => Json(serde_json::json!({
+                "error": "Could not read file",
+                "contexts": {},
+                "mode": "paper"
+            })).into_response(),
+        }
+    } else {
+        Json(serde_json::json!({
+            "error": "No dual brain context available",
+            "contexts": {},
+            "mode": "paper"
+        })).into_response()
     }
 }
 
