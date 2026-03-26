@@ -3,21 +3,9 @@
 mode = "paper"
 capital_usd = 100
 symbols = [
-    # Major coins
-    "BTC-USDT", "ETH-USDT", "SOL-USDT", "XRP-USDT", "DOGE-USDT",
-    "ADA-USDT", "AVAX-USDT", "DOT-USDT", "LINK-USDT", "MATIC-USDT",
-    # DeFi
-    "UNI-USDT", "AAVE-USDT", "MKR-USDT", "CRV-USDT", "LDO-USDT",
-    # Layer 2
-    "ARB-USDT", "OP-USDT", "IMX-USDT", "STRK-USDT",
-    # AI & Gaming
-    "FET-USDT", "RNDR-USDT", "INJ-USDT", "GALA-USDT", "AXS-USDT",
-    # Memes
-    "SHIB-USDT", "PEPE-USDT", "FLOKI-USDT", "BONK-USDT", "WIF-USDT",
-    # Infrastructure
-    "ATOM-USDT", "APT-USDT", "SUI-USDT", "SEI-USDT", "TIA-USDT",
-    # OKX ecosystem
-    "OKB-USDT"
+    "BTC-USDT",
+    "ETH-USDT",
+    "SOL-USDT"
 ]
 
 [risk]
@@ -32,7 +20,11 @@ max_positions = 5
 [feeds]
 okx_ws_url = "wss://ws.okx.com:8443/ws/v5/public"
 price_window_size = 100
-update_interval_ms = 100
+update_interval_ms = 5000  # 5 seconds to avoid spamming Claude
+xlayer_enabled = true
+xlayer_poll_interval_ms = 2000
+news_enabled = true
+signal_chains = ["xlayer", "ethereum"]
 
 [alpha]
 momentum_lookback = 14
@@ -51,4 +43,4 @@ preferred_venues = ["okx"]
 [brain]
 data_dir = "data"
 timeout_secs = 60
-auto_invoke = false
+auto_invoke = false  # Disabled for now - invoke manually with /simmons-brain

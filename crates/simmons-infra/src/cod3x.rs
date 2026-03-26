@@ -7,6 +7,7 @@
 //! - Leverage positions
 
 use anyhow::{anyhow, Result};
+use chrono;
 use ethers::prelude::*;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
@@ -15,23 +16,51 @@ use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 /// Cod3x contract addresses on X Layer
+///
+/// Note: In production, these should be loaded from environment variables
+/// or configuration files to support different networks.
 pub mod contracts {
     use ethers::types::Address;
     use std::str::FromStr;
+    use std::sync::OnceLock;
+
+    // Use OnceLock for safe lazy initialization that validates at startup
+    static LENDING_POOL: OnceLock<Address> = OnceLock::new();
+    static PRICE_ORACLE: OnceLock<Address> = OnceLock::new();
+    static DATA_PROVIDER: OnceLock<Address> = OnceLock::new();
+
+    fn parse_address(addr: &str) -> Address {
+        Address::from_str(addr).expect("Invalid hardcoded address - this is a build error")
+    }
 
     /// Main lending pool
     pub fn lending_pool() -> Address {
-        Address::from_str("0x794a61358D6845594F94dc1DB02A252b5b4814aD").unwrap()
+        *LENDING_POOL.get_or_init(|| {
+            std::env::var("COD3X_LENDING_POOL")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x794a61358D6845594F94dc1DB02A252b5b4814aD"))
+        })
     }
 
     /// Price oracle
     pub fn price_oracle() -> Address {
-        Address::from_str("0x54586bE62E3c3580375aE3723C145253060Ca0C2").unwrap()
+        *PRICE_ORACLE.get_or_init(|| {
+            std::env::var("COD3X_PRICE_ORACLE")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x54586bE62E3c3580375aE3723C145253060Ca0C2"))
+        })
     }
 
     /// Protocol data provider
     pub fn data_provider() -> Address {
-        Address::from_str("0x69FA688f1Dc47d4B5d8029D5a35FB7a548310654").unwrap()
+        *DATA_PROVIDER.get_or_init(|| {
+            std::env::var("COD3X_DATA_PROVIDER")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x69FA688f1Dc47d4B5d8029D5a35FB7a548310654"))
+        })
     }
 }
 
@@ -158,8 +187,19 @@ impl Cod3xClient {
         }
     }
 
-    /// Create from RPC URL
+    /// Create from RPC URL (validates URL and enforces HTTPS for mainnet)
     pub fn from_rpc(rpc_url: &str) -> Result<Self> {
+        // Validate RPC URL format
+        let url = url::Url::parse(rpc_url)
+            .map_err(|e| anyhow!("Invalid RPC URL: {}", e))?;
+
+        // Enforce HTTPS for non-localhost URLs (security requirement)
+        if !url.host_str().map_or(false, |h| h == "localhost" || h == "127.0.0.1")
+            && url.scheme() != "https"
+        {
+            return Err(anyhow!("RPC URL must use HTTPS for non-localhost connections"));
+        }
+
         let provider = Provider::<Http>::try_from(rpc_url)?;
         Ok(Self::new(Arc::new(provider)))
     }
@@ -169,9 +209,65 @@ impl Cod3xClient {
         self.provider.clone()
     }
 
-    /// Get asset price from oracle
+    /// Get asset price from oracle with staleness check
+    ///
+    /// # Arguments
+    /// * `asset` - Token address to get price for
+    /// * `max_staleness_secs` - Maximum allowed price age in seconds (default: 3600 = 1 hour)
     pub async fn get_asset_price(&self, asset: Address) -> Result<Decimal> {
-        // getAssetPrice(address) selector
+        self.get_asset_price_with_staleness(asset, 3600).await
+    }
+
+    /// Get asset price with configurable staleness threshold
+    pub async fn get_asset_price_with_staleness(
+        &self,
+        asset: Address,
+        max_staleness_secs: u64,
+    ) -> Result<Decimal> {
+        // latestRoundData() selector for Chainlink-style oracles
+        // Returns: (roundId, answer, startedAt, updatedAt, answeredInRound)
+        let selector = ethers::utils::id("latestRoundData()");
+
+        let tx = TransactionRequest::new()
+            .to(self.oracle)
+            .data(selector[..4].to_vec());
+
+        let result = self.provider.call(&tx.into(), None).await;
+
+        // Try Chainlink-style first (with timestamp)
+        if let Ok(data) = result {
+            if data.len() >= 160 {
+                // Parse Chainlink response
+                let price = U256::from_big_endian(&data[32..64]);
+                let updated_at = U256::from_big_endian(&data[96..128]);
+
+                // Check staleness
+                let now = chrono::Utc::now().timestamp() as u64;
+                let price_age = now.saturating_sub(updated_at.as_u64());
+
+                if price_age > max_staleness_secs {
+                    warn!(
+                        "Oracle price for {:?} is stale: {} seconds old (max: {})",
+                        asset, price_age, max_staleness_secs
+                    );
+                    return Err(anyhow!(
+                        "Oracle price is stale: {} seconds old (max allowed: {})",
+                        price_age,
+                        max_staleness_secs
+                    ));
+                }
+
+                // Validate price is within reasonable bounds
+                let price_decimal = decimal_from_u256(price, 8);
+                if price_decimal.is_zero() {
+                    return Err(anyhow!("Oracle returned zero price"));
+                }
+
+                return Ok(price_decimal);
+            }
+        }
+
+        // Fallback to simple getAssetPrice (Aave-style)
         let selector = ethers::utils::id("getAssetPrice(address)");
         let data = ethers::abi::encode(&[ethers::abi::Token::Address(asset)]);
 
@@ -186,8 +282,16 @@ impl Cod3xClient {
 
         if result.len() >= 32 {
             let price = U256::from_big_endian(&result[..32]);
-            // Oracle prices typically have 8 decimals
-            Ok(decimal_from_u256(price, 8))
+            let price_decimal = decimal_from_u256(price, 8);
+
+            // Validate price
+            if price_decimal.is_zero() {
+                return Err(anyhow!("Oracle returned zero price"));
+            }
+
+            // Warning: No staleness check available for simple oracle
+            warn!("Using oracle without staleness check for {:?}", asset);
+            Ok(price_decimal)
         } else {
             Err(anyhow!("Invalid oracle response"))
         }

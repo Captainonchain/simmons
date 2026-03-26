@@ -23,9 +23,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
+use tokio::signal;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 // ============================================================================
 // App State
@@ -395,14 +396,23 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         });
     }
 
-    // Spawn update broadcaster
+    // Spawn update broadcaster with graceful shutdown
     let state_clone = state.clone();
-    tokio::spawn(async move {
+    let update_handle = tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_millis(500));
         loop {
-            interval.tick().await;
-            if let Some(update) = build_full_update(&state_clone).await {
-                let _ = state_clone.tx.send(update);
+            tokio::select! {
+                _ = interval.tick() => {
+                    if let Some(update) = build_full_update(&state_clone).await {
+                        if state_clone.tx.send(update).is_err() {
+                            // No subscribers, continue anyway
+                        }
+                    }
+                }
+                _ = signal::ctrl_c() => {
+                    info!("Shutting down update broadcaster...");
+                    break;
+                }
             }
         }
     });
@@ -415,8 +425,11 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         .route("/api/ai/regime", get(regime_handler))
         .route("/api/risk/portfolio", get(portfolio_handler))
         .route("/api/risk/positions", get(positions_handler))
+        .route("/api/risk/circuit-breaker", get(circuit_breaker_handler))
+        .route("/api/memory", get(memory_handler))
         .route("/api/brain/decide", post(decide_handler))
         .route("/api/brain/state", get(brain_state_handler))
+        .route("/api/trades", get(trades_handler))
         .route("/ws", get(ws_handler))
         .fallback_service(
             ServeDir::new("frontend/out").append_index_html_on_directories(true),
@@ -428,9 +441,43 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
     info!("Starting Simmons Dashboard at http://localhost:{}", port);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+
+    // Serve with graceful shutdown
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+
+    // Cleanup background tasks
+    update_handle.abort();
+    info!("Dashboard shutdown complete");
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    info!("Received shutdown signal");
 }
 
 // ============================================================================
@@ -538,15 +585,19 @@ async fn build_full_update(state: &AppState) -> Option<DashboardUpdate> {
         },
     };
 
-    // Build Decision & Risk Layer
-    let snapshot = state.portfolio.snapshot();
-    let initial = state.config.capital_usd;
-    let pnl = snapshot.realized_pnl + snapshot.unrealized_pnl;
-    let pnl_pct = if !initial.is_zero() {
-        (pnl / initial * dec!(100)).to_string().parse().unwrap_or(0.0)
-    } else {
-        0.0
-    };
+    // Build Decision & Risk Layer - Use brain state as single source of truth
+    let brain_state = state.brain.load_state().ok();
+    let initial_capital = 100.0_f64;
+    let total_pnl: f64 = brain_state.as_ref()
+        .and_then(|s| s.total_pnl.to_string().parse().ok())
+        .unwrap_or(0.0);
+    let total_trades = brain_state.as_ref().map(|s| s.total_trades).unwrap_or(0);
+    let wins = brain_state.as_ref().map(|s| s.wins).unwrap_or(0);
+    let losses = brain_state.as_ref().map(|s| s.losses).unwrap_or(0);
+    let win_rate = if total_trades > 0 { (wins as f64 / total_trades as f64) * 100.0 } else { 0.0 };
+    let equity = initial_capital + total_pnl;
+    let pnl_pct = total_pnl; // Since capital is $100, pnl% = pnl$
+    let drawdown = if total_pnl < 0.0 { -total_pnl / initial_capital } else { 0.0 };
 
     let positions: Vec<PositionData> = state.portfolio.positions().into_iter().map(|p| {
         let pnl_pct = p.pnl_percent().to_string().parse().unwrap_or(0.0);
@@ -565,15 +616,15 @@ async fn build_full_update(state: &AppState) -> Option<DashboardUpdate> {
 
     let decision_risk = DecisionRiskLayer {
         portfolio: PortfolioData {
-            capital: snapshot.capital.to_string().parse().unwrap_or(0.0),
-            equity: state.portfolio.total_equity().to_string().parse().unwrap_or(0.0),
-            pnl: pnl.to_string().parse().unwrap_or(0.0),
+            capital: initial_capital,
+            equity,
+            pnl: total_pnl,
             pnl_pct,
-            drawdown: (snapshot.drawdown * dec!(100)).to_string().parse().unwrap_or(0.0),
-            max_drawdown: 5.0,
+            drawdown,
+            max_drawdown: 0.30,
             sharpe_ratio: 1.5,
-            win_rate: (state.portfolio.win_rate() * dec!(100)).to_string().parse().unwrap_or(0.0),
-            total_trades: state.brain.load_state().map(|s| s.total_trades).unwrap_or(0),
+            win_rate,
+            total_trades,
         },
         positions,
         rebalancer: RebalancerData {
@@ -796,6 +847,113 @@ async fn brain_state_handler(State(state): State<Arc<AppState>>) -> impl IntoRes
             "total_trades": 0, "wins": 0, "losses": 0, "total_pnl": "0"
         })).into_response(),
     }
+}
+
+async fn trades_handler(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    let trades_path = "data/trades.json";
+    if std::path::Path::new(trades_path).exists() {
+        match std::fs::read_to_string(trades_path) {
+            Ok(content) => {
+                match serde_json::from_str::<serde_json::Value>(&content) {
+                    Ok(data) => Json(data).into_response(),
+                    Err(_) => Json(serde_json::json!({"trades": []})).into_response(),
+                }
+            }
+            Err(_) => Json(serde_json::json!({"trades": []})).into_response(),
+        }
+    } else {
+        Json(serde_json::json!({"trades": []})).into_response()
+    }
+}
+
+async fn circuit_breaker_handler(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    // Read trades to calculate consecutive losses
+    let consecutive_losses: u32 = if let Ok(content) = std::fs::read_to_string("data/trades.json") {
+        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&content) {
+            let trades = data.get("trades").and_then(|t| t.as_array()).cloned().unwrap_or_default();
+            let mut count = 0u32;
+            for trade in trades.iter().rev() {
+                if trade.get("outcome").and_then(|o| o.as_str()) == Some("loss") {
+                    count += 1;
+                } else {
+                    break;
+                }
+            }
+            count
+        } else { 0 }
+    } else { 0 };
+
+    // Read brain state for drawdown calculation
+    let brain_state: Option<serde_json::Value> = std::fs::read_to_string("data/state.json")
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok());
+    let total_pnl: f64 = brain_state.as_ref()
+        .and_then(|s| s.get("total_pnl"))
+        .and_then(|p| p.as_str())
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(0.0);
+    let drawdown = if total_pnl < 0.0 { (-total_pnl / 100.0) } else { 0.0 };
+
+    let risk_level = if drawdown > 0.15 || consecutive_losses >= 3 {
+        "critical"
+    } else if drawdown > 0.10 || consecutive_losses >= 2 {
+        "elevated"
+    } else {
+        "normal"
+    };
+
+    let triggered = consecutive_losses >= 3 || drawdown > 0.20;
+    let can_trade = !triggered && risk_level != "critical";
+
+    let position_modifier = match risk_level {
+        "critical" => 0.0,
+        "elevated" => 0.5,
+        _ => 1.0,
+    };
+
+    Json(serde_json::json!({
+        "triggered": triggered,
+        "reason": if triggered { "Risk limits exceeded" } else { "" },
+        "risk_level": risk_level,
+        "current_drawdown": drawdown.to_string().parse::<f64>().unwrap_or(0.0),
+        "max_drawdown_limit": 0.20,
+        "consecutive_losses": consecutive_losses,
+        "max_consecutive_losses": 3,
+        "position_size_modifier": position_modifier,
+        "can_trade": can_trade,
+        "recommendations": if can_trade {
+            vec!["Normal trading permitted"]
+        } else {
+            vec!["Stop trading - risk limits exceeded", "Review recent losses"]
+        }
+    }))
+}
+
+async fn memory_handler(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    // Return memory snapshot from file or default
+    let memory_path = "data/memory.json";
+    let memory: serde_json::Value = if std::path::Path::new(memory_path).exists() {
+        match std::fs::read_to_string(memory_path) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_else(|_| default_memory()),
+            Err(_) => default_memory(),
+        }
+    } else {
+        default_memory()
+    };
+
+    Json(memory)
+}
+
+fn default_memory() -> serde_json::Value {
+    serde_json::json!({
+        "total_learnings": 0,
+        "total_reflections": 0,
+        "agent_stats": {},
+        "recent_lessons": [],
+        "avoid_patterns": [],
+        "winning_patterns": [],
+        "last_updated": null
+    })
 }
 
 async fn ws_handler(

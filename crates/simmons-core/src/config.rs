@@ -88,6 +88,30 @@ pub struct FeedsConfig {
     pub price_window_size: usize,
     /// Update interval in milliseconds
     pub update_interval_ms: u64,
+    /// Enable X Layer DEX feed
+    #[serde(default = "default_true")]
+    pub xlayer_enabled: bool,
+    /// X Layer poll interval in milliseconds
+    #[serde(default = "default_xlayer_poll")]
+    pub xlayer_poll_interval_ms: u64,
+    /// Enable news/sentiment feed
+    #[serde(default = "default_true")]
+    pub news_enabled: bool,
+    /// Chains to track for signals
+    #[serde(default = "default_signal_chains")]
+    pub signal_chains: Vec<String>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_xlayer_poll() -> u64 {
+    2000
+}
+
+fn default_signal_chains() -> Vec<String> {
+    vec!["xlayer".to_string(), "ethereum".to_string()]
 }
 
 impl Default for FeedsConfig {
@@ -96,6 +120,10 @@ impl Default for FeedsConfig {
             okx_ws_url: "wss://ws.okx.com:8443/ws/v5/public".to_string(),
             price_window_size: 100,
             update_interval_ms: 100,
+            xlayer_enabled: true,
+            xlayer_poll_interval_ms: 2000,
+            news_enabled: true,
+            signal_chains: default_signal_chains(),
         }
     }
 }

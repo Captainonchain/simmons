@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 simmons-core = { workspace = true }
+simmons-infra = { path = "../simmons-infra" }
 tokio = { workspace = true }
 tokio-tungstenite = { workspace = true }
 futures-util = { workspace = true }
@@ -21,6 +22,7 @@ dashmap = { workspace = true }
 crossbeam = { workspace = true }
 parking_lot = { workspace = true }
 shellexpand = "3"
+percent-encoding = "2"
 
 [dev-dependencies]
 rust_decimal_macros = { workspace = true }

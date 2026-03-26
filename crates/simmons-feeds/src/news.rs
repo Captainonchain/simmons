@@ -1,12 +1,18 @@
 //! News and Social Sentiment Feed
 //!
 //! Aggregates sentiment from news sources and social media.
+//! Integrates with OnchainOS signals for smart money / whale / KOL activity.
 
+use anyhow::Result;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use simmons_infra::OnchainOSCli;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::RwLock;
+use tokio::time::interval;
 use tracing::{debug, info, warn};
 
 /// Sentiment source type
@@ -444,6 +450,140 @@ pub struct SentimentExtreme {
 pub enum ExtremeType {
     ExcessiveBullish,
     ExcessiveBearish,
+}
+
+/// Signal-based sentiment source using OnchainOS
+pub struct SignalSentimentFeed {
+    cli: OnchainOSCli,
+    news_feed: Arc<RwLock<NewsFeed>>,
+    chains: Vec<String>,
+    poll_interval_ms: u64,
+}
+
+impl SignalSentimentFeed {
+    pub fn new(news_feed: Arc<RwLock<NewsFeed>>, chains: Vec<String>) -> Self {
+        Self {
+            cli: OnchainOSCli::new(),
+            news_feed,
+            chains,
+            poll_interval_ms: 30000, // 30 seconds
+        }
+    }
+
+    /// Start background signal polling
+    pub fn start(self) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
+            self.run().await;
+        })
+    }
+
+    /// Run the signal fetcher loop
+    async fn run(&self) {
+        let mut poll_timer = interval(Duration::from_millis(self.poll_interval_ms));
+
+        info!(
+            "Signal sentiment feed started for chains: {:?}",
+            self.chains
+        );
+
+        loop {
+            poll_timer.tick().await;
+
+            for chain in &self.chains {
+                if let Err(e) = self.fetch_signals(chain).await {
+                    debug!("Failed to fetch signals for {}: {}", chain, e);
+                }
+            }
+
+            // Record snapshot for velocity tracking
+            let mut feed = self.news_feed.write().await;
+            feed.record_snapshot();
+        }
+    }
+
+    /// Fetch signals from OnchainOS and convert to sentiment items
+    async fn fetch_signals(&self, chain: &str) -> Result<()> {
+        let signals = self.cli.get_signals(Some(chain)).await?;
+
+        let mut feed = self.news_feed.write().await;
+
+        let count = signals.len();
+        for signal in signals {
+            let sentiment_item = self.signal_to_sentiment(&signal);
+            feed.add_item(sentiment_item);
+        }
+
+        if count > 0 {
+            info!("[Signals] {} new signals from {}", count, chain);
+        }
+
+        Ok(())
+    }
+
+    /// Convert OnchainOS signal to sentiment item
+    fn signal_to_sentiment(&self, signal: &simmons_infra::onchainos_cli::Signal) -> SentimentItem {
+        // Determine sentiment from action
+        let (sentiment, score) = match signal.action.as_str() {
+            "buy" => (SentimentLevel::Bullish, dec!(0.7)),
+            "sell" => (SentimentLevel::Bearish, dec!(-0.7)),
+            _ => (SentimentLevel::Neutral, dec!(0.0)),
+        };
+
+        // Determine source from signal type
+        let source = match signal.signal_type.as_str() {
+            "smart_money" => SentimentSource::Twitter, // Use Twitter as proxy for smart money
+            "whale" => SentimentSource::News,           // Use News as proxy for whale activity
+            "kol" => SentimentSource::Discord,          // Use Discord as proxy for KOL
+            _ => SentimentSource::Telegram,
+        };
+
+        // Estimate engagement from amount
+        let engagement = signal
+            .amount_usd
+            .as_ref()
+            .and_then(|a| a.parse::<f64>().ok())
+            .map(|a| (a / 1000.0) as u64) // Scale down for engagement metric
+            .unwrap_or(100);
+
+        // Influence based on signal type
+        let author_influence = match signal.signal_type.as_str() {
+            "smart_money" => dec!(1.5), // High influence
+            "whale" => dec!(1.3),
+            "kol" => dec!(1.2),
+            _ => dec!(1.0),
+        };
+
+        let keywords = signal
+            .token_symbol
+            .as_ref()
+            .map(|s| vec![s.to_lowercase()])
+            .unwrap_or_default();
+
+        SentimentItem {
+            source,
+            text: format!(
+                "{} {} {} {}",
+                signal.signal_type,
+                signal.action,
+                signal.token_symbol.as_deref().unwrap_or("unknown"),
+                signal.amount_usd.as_deref().unwrap_or("")
+            ),
+            sentiment,
+            score,
+            engagement,
+            author_influence,
+            timestamp: signal.timestamp as i64,
+            keywords,
+        }
+    }
+}
+
+/// Create a full news/sentiment feed with OnchainOS signal integration
+pub fn create_integrated_news_feed(chains: Vec<String>) -> (Arc<RwLock<NewsFeed>>, tokio::task::JoinHandle<()>) {
+    let news_feed = Arc::new(RwLock::new(NewsFeed::with_defaults()));
+    let signal_feed = SignalSentimentFeed::new(news_feed.clone(), chains);
+    let handle = signal_feed.start();
+    (news_feed, handle)
 }
 
 #[cfg(test)]

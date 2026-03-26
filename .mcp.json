@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "simmons": {
+      "command": "./target/release/simmons",
+      "args": ["mcp"],
+      "env": {
+        "SIMMONS_MODE": "paper"
+      }
+    },
+    "onchainos": {
+      "command": "/Users/sandeep/.local/bin/onchainos",
+      "args": ["mcp"],
+      "env": {
+        "OKX_API_KEY": "${OKX_API_KEY}",
+        "OKX_API_SECRET": "${OKX_API_SECRET}",
+        "OKX_PASSPHRASE": "${OKX_PASSPHRASE}"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "simmons": {
+      "command": "./target/release/simmons",
+      "args": ["mcp"],
+      "env": {
+        "SIMMONS_MODE": "paper",
+        "RUST_LOG": "warn"
+      }
+    }
+  }
+}

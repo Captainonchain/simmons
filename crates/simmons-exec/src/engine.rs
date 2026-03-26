@@ -1,5 +1,8 @@
 //! Unified execution engine
+//!
+//! Routes orders to paper trading or live execution based on trading mode.
 
+use crate::live::{LiveExecutor, LiveExecutorConfig};
 use crate::mev::MevShield;
 use crate::paper::PaperTrader;
 use crate::router::SmartOrderRouter;
@@ -20,6 +23,8 @@ pub struct ExecutionEngine {
     mev_shield: MevShield,
     /// Paper trader (for paper mode)
     paper_trader: Option<PaperTrader>,
+    /// Live executor (for live mode)
+    live_executor: Option<LiveExecutor>,
     /// Portfolio reference
     portfolio: Arc<Portfolio>,
 }
@@ -44,8 +49,43 @@ impl ExecutionEngine {
             router,
             mev_shield,
             paper_trader,
+            live_executor: None,
             portfolio,
         }
+    }
+
+    /// Initialize live execution from environment variables
+    /// Call this after new() if mode is Live
+    pub fn with_live_executor(mut self, testnet: bool) -> Result<Self> {
+        if self.mode == TradingMode::Live {
+            let config = LiveExecutorConfig::default();
+            let executor = LiveExecutor::new(config, self.portfolio.clone())
+                .with_okx()?
+                .with_xlayer_signer(testnet)?;
+
+            if !executor.is_ready() {
+                return Err(anyhow::anyhow!(
+                    "Live executor not ready. Check environment variables:\n\
+                     - OKX_API_KEY, OKX_API_SECRET, OKX_PASSPHRASE (for CEX)\n\
+                     - XLAYER_PRIVATE_KEY (for DEX)"
+                ));
+            }
+
+            info!(
+                "Live executor initialized. Available venues: {:?}",
+                executor.available_venues()
+            );
+            self.live_executor = Some(executor);
+        }
+        Ok(self)
+    }
+
+    /// Check if live trading is ready
+    pub fn is_live_ready(&self) -> bool {
+        self.live_executor
+            .as_ref()
+            .map(|e| e.is_ready())
+            .unwrap_or(false)
     }
 
     /// Execute an order
@@ -75,9 +115,17 @@ impl ExecutionEngine {
                 Ok(result)
             }
             TradingMode::Live => {
-                // Live execution would use OnchainOS or exchange API
-                warn!("Live trading not implemented, falling back to paper");
-                Err(anyhow::anyhow!("Live trading not implemented"))
+                // Use live executor if available
+                if let Some(executor) = &self.live_executor {
+                    executor.execute(&order, market_price).await
+                } else {
+                    // Fallback to paper if live not configured
+                    warn!("Live executor not configured, falling back to paper trading");
+                    let trader = PaperTrader::new(self.portfolio.clone());
+                    let result = trader.execute(&order, market_price)
+                        .map_err(|e| anyhow::anyhow!(e))?;
+                    Ok(result)
+                }
             }
         }
     }
@@ -99,8 +147,15 @@ impl ExecutionEngine {
                 Ok(trade)
             }
             TradingMode::Live => {
-                warn!("Live trading not implemented");
-                Err(anyhow::anyhow!("Live trading not implemented"))
+                if let Some(executor) = &self.live_executor {
+                    executor.close_position(symbol, market_price, reason).await
+                } else {
+                    warn!("Live executor not configured, using paper close");
+                    let trader = PaperTrader::new(self.portfolio.clone());
+                    let trade = trader.close(symbol, market_price, reason)
+                        .map_err(|e| anyhow::anyhow!(e))?;
+                    Ok(trade)
+                }
             }
         }
     }
@@ -123,6 +178,19 @@ impl ExecutionEngine {
     /// Get total equity
     pub fn equity(&self) -> Decimal {
         self.portfolio.total_equity()
+    }
+
+    /// Get live executor reference (for advanced operations)
+    pub fn live_executor(&self) -> Option<&LiveExecutor> {
+        self.live_executor.as_ref()
+    }
+
+    /// Check if there's a pending order for a symbol
+    pub fn has_pending_order(&self, symbol: &str) -> bool {
+        self.live_executor
+            .as_ref()
+            .map(|e| e.has_pending_order(symbol))
+            .unwrap_or(false)
     }
 }
 
@@ -151,5 +219,15 @@ mod tests {
         let result = engine.execute(order, dec!(67000)).await.unwrap();
         assert_eq!(result.symbol, "BTC-USDT");
         assert!(engine.has_position("BTC-USDT"));
+    }
+
+    #[test]
+    fn test_live_mode_needs_executor() {
+        let portfolio = Arc::new(Portfolio::new(dec!(10000)));
+        let config = ExecutionConfig::default();
+        let engine = ExecutionEngine::new(TradingMode::Live, config, portfolio);
+
+        // Without live executor, it should not be ready
+        assert!(!engine.is_live_ready());
     }
 }

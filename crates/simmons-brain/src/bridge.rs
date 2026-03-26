@@ -92,15 +92,35 @@ impl BrainBridge {
 
     /// Invoke Claude Code skill (for autonomous mode)
     pub async fn invoke_claude(&self, skill: &str) -> Result<String> {
-        let project_dir = self.data_dir.parent().unwrap_or(&self.data_dir);
-
         info!("Invoking Claude skill: {}", skill);
 
-        let output = Command::new("claude")
+        // Get HOME and construct paths
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/sandeep".to_string());
+        let claude_symlink = format!("{}/.local/bin/claude", home);
+
+        // Resolve symlink to get actual binary path
+        let claude_path = std::fs::canonicalize(&claude_symlink)
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or(claude_symlink);
+
+        info!("Using claude CLI at: {}", claude_path);
+
+        // Get current working directory (should be project root)
+        let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        info!("Working directory: {:?}", cwd);
+
+        // Add ~/.local/bin to PATH for the subprocess
+        let current_path = std::env::var("PATH").unwrap_or_default();
+        let new_path = format!("{}/.local/bin:{}", home, current_path);
+
+        let output = Command::new(&claude_path)
             .args(["--print", &format!("/{}", skill)])
-            .current_dir(project_dir)
+            .current_dir(&cwd)
+            .env("PATH", &new_path)
+            .env("HOME", &home)
             .output()
-            .await?;
+            .await
+            .map_err(|e| anyhow!("Failed to execute claude CLI: {} (path: {})", e, claude_path))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

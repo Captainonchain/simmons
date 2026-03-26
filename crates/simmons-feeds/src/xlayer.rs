@@ -1,15 +1,17 @@
 //! X Layer Data Feed
 //!
-//! Real-time price and event data from X Layer DEXes.
+//! Real-time price and event data from X Layer DEXes via OnchainOS CLI.
 
 use anyhow::Result;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use simmons_infra::OnchainOSCli;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
+use tokio::time::interval;
 use tracing::{debug, info, warn};
 
 /// X Layer feed configuration
@@ -133,6 +135,27 @@ impl XLayerFeed {
 
     pub fn with_defaults() -> Self {
         Self::new(XLayerFeedConfig::default())
+    }
+
+    /// Create a data fetcher that polls OnchainOS CLI
+    pub fn create_fetcher(&self) -> XLayerDataFetcher {
+        XLayerDataFetcher {
+            cli: OnchainOSCli::new().with_chain("xlayer"),
+            price_cache: self.price_cache.clone(),
+            pool_states: self.pool_states.clone(),
+            poll_interval_ms: self.config.poll_interval_ms,
+        }
+    }
+
+    /// Start background data polling
+    pub fn start_polling(
+        &self,
+        tokens: Vec<(String, String)>, // (symbol, address)
+    ) -> tokio::task::JoinHandle<()> {
+        let fetcher = self.create_fetcher();
+        tokio::spawn(async move {
+            fetcher.run(tokens).await;
+        })
     }
 
     /// Add a pool to track
@@ -296,6 +319,142 @@ pub struct PoolArbitrage {
     pub sell_price: Decimal,
     pub optimal_size_usd: Decimal,
     pub estimated_profit_bps: Decimal,
+}
+
+/// Data fetcher that polls OnchainOS CLI for X Layer prices
+pub struct XLayerDataFetcher {
+    cli: OnchainOSCli,
+    price_cache: Arc<RwLock<HashMap<String, CachedPrice>>>,
+    pool_states: Arc<RwLock<HashMap<String, PoolState>>>,
+    poll_interval_ms: u64,
+}
+
+impl XLayerDataFetcher {
+    /// Run the data fetcher loop
+    pub async fn run(&self, tokens: Vec<(String, String)>) {
+        let mut poll_timer = interval(Duration::from_millis(self.poll_interval_ms));
+
+        info!("XLayer data fetcher started for {} tokens", tokens.len());
+
+        loop {
+            poll_timer.tick().await;
+
+            for (symbol, address) in &tokens {
+                if let Err(e) = self.fetch_price(symbol, address).await {
+                    warn!("Failed to fetch price for {}: {}", symbol, e);
+                }
+            }
+        }
+    }
+
+    /// Fetch price for a token
+    async fn fetch_price(&self, symbol: &str, address: &str) -> Result<()> {
+        // Try to get price info via OnchainOS CLI
+        match self.cli.get_price_info(address, Some("xlayer")).await {
+            Ok(info) => {
+                let price: Decimal = info.price.parse().unwrap_or_default();
+
+                // Update cache
+                let mut cache = self.price_cache.write().await;
+                cache.insert(
+                    symbol.to_string(),
+                    CachedPrice {
+                        price,
+                        timestamp: chrono::Utc::now().timestamp_millis(),
+                        source: "onchainos".to_string(),
+                    },
+                );
+
+                debug!("[XLayer] {} = ${}", symbol, price);
+
+                // If we have liquidity info, update pool state
+                if let Some(liquidity) = info.liquidity {
+                    let liquidity_usd: Decimal = liquidity.parse().unwrap_or_default();
+                    let volume: Decimal = info
+                        .volume_24h
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or_default();
+
+                    let mut states = self.pool_states.write().await;
+                    states.insert(
+                        address.to_string(),
+                        PoolState {
+                            address: address.to_string(),
+                            token0_reserve: Decimal::ZERO, // Not available from price-info
+                            token1_reserve: Decimal::ZERO,
+                            price_0_in_1: price,
+                            price_1_in_0: if price.is_zero() {
+                                Decimal::ZERO
+                            } else {
+                                Decimal::ONE / price
+                            },
+                            liquidity_usd,
+                            volume_24h_usd: volume,
+                            fee_tier_bps: 30, // Default 0.3%
+                            last_update: chrono::Utc::now().timestamp_millis(),
+                        },
+                    );
+                }
+
+                Ok(())
+            }
+            Err(e) => {
+                // Fall back to simple price endpoint
+                match self.cli.get_price(address, Some("xlayer")).await {
+                    Ok(price_data) => {
+                        let price: Decimal = price_data.price.parse().unwrap_or_default();
+
+                        let mut cache = self.price_cache.write().await;
+                        cache.insert(
+                            symbol.to_string(),
+                            CachedPrice {
+                                price,
+                                timestamp: chrono::Utc::now().timestamp_millis(),
+                                source: "onchainos".to_string(),
+                            },
+                        );
+
+                        debug!("[XLayer] {} = ${} (fallback)", symbol, price);
+                        Ok(())
+                    }
+                    Err(e2) => Err(anyhow::anyhow!("Failed both price endpoints: {} / {}", e, e2)),
+                }
+            }
+        }
+    }
+
+    /// Fetch swap quote (for execution planning)
+    pub async fn get_swap_quote(
+        &self,
+        from_token: &str,
+        to_token: &str,
+        amount: &str,
+    ) -> Result<SwapQuoteResult> {
+        let quote = self
+            .cli
+            .get_swap_quote(from_token, to_token, amount, Some("xlayer"))
+            .await?;
+
+        Ok(SwapQuoteResult {
+            from_amount: quote.from_token_amount.parse().unwrap_or_default(),
+            to_amount: quote.to_token_amount.parse().unwrap_or_default(),
+            price_impact_bps: quote
+                .price_impact
+                .and_then(|p| p.parse::<Decimal>().ok())
+                .map(|p| p * dec!(100))
+                .unwrap_or_default(),
+            gas_estimate: quote.estimate_gas_fee.unwrap_or_default(),
+        })
+    }
+}
+
+/// Result of a swap quote
+#[derive(Debug, Clone)]
+pub struct SwapQuoteResult {
+    pub from_amount: Decimal,
+    pub to_amount: Decimal,
+    pub price_impact_bps: Decimal,
+    pub gas_estimate: String,
 }
 
 #[cfg(test)]

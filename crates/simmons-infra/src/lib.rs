@@ -8,10 +8,12 @@ pub mod bridge;
 pub mod cod3x;
 pub mod dex;
 pub mod onchainos;
+pub mod onchainos_cli;
 pub mod xlayer;
 
 pub use bridge::OkxBridge;
 pub use cod3x::Cod3xClient;
 pub use dex::DexClient;
 pub use onchainos::{OnchainOSClient, OnchainOSConfig};
+pub use onchainos_cli::OnchainOSCli;
 pub use xlayer::XLayerClient;

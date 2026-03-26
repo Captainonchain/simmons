@@ -7,6 +7,7 @@
 //!
 //! Uses private mempools, transaction batching, and timing strategies.
 
+use chrono;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -310,32 +311,94 @@ impl MevShield {
         }
     }
 
-    /// Submit to private mempool
+    /// Submit to private mempool (Flashbots-style)
     pub async fn submit_private(&self, bundle: &TransactionBundle) -> Result<PrivateSubmission, String> {
         let pool_name = bundle.pool_name.as_ref()
             .ok_or("No private pool configured")?;
 
         let pool = self.config.private_pools
             .iter()
-            .find(|p| &p.name == pool_name)
-            .ok_or("Private pool not found")?;
-
-        // In real implementation, this would make HTTP request to the relay
-        // For now, return a mock submission result
+            .find(|p| &p.name == pool_name && p.enabled)
+            .ok_or("Private pool not found or disabled")?;
 
         info!(
-            "Submitting bundle of {} txs to {} private pool",
+            "Submitting bundle of {} txs to {} private pool at {}",
             bundle.transactions.len(),
-            pool_name
+            pool_name,
+            pool.endpoint
         );
 
-        Ok(PrivateSubmission {
-            bundle_hash: format!("0x{}", "a".repeat(64)),
-            pool_name: pool_name.clone(),
-            submitted_at: chrono::Utc::now().timestamp(),
-            estimated_inclusion_block: 0,
-            status: SubmissionStatus::Pending,
-        })
+        // Build the bundle payload (Flashbots format)
+        // Note: In production, this would contain signed raw transactions
+        let tx_details: Vec<serde_json::Value> = bundle.transactions
+            .iter()
+            .map(|t| serde_json::json!({
+                "symbol": t.order.symbol,
+                "side": format!("{:?}", t.order.side),
+                "size": t.order.size.to_string(),
+                "priority_fee": t.priority_fee.to_string(),
+            }))
+            .collect();
+
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "eth_sendBundle",
+            "params": [{
+                "txs": tx_details,
+                "blockNumber": format!("0x{:x}", chrono::Utc::now().timestamp() as u64),
+                "minTimestamp": 0,
+                "maxTimestamp": chrono::Utc::now().timestamp() + 120, // 2 min window
+            }]
+        });
+
+        // Make actual HTTP request to the relay
+        let client = reqwest::Client::new();
+        match client
+            .post(&pool.endpoint)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+        {
+            Ok(response) => {
+                if response.status().is_success() {
+                    let result: serde_json::Value = response.json().await
+                        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+                    let bundle_hash = result["result"]["bundleHash"]
+                        .as_str()
+                        .unwrap_or("unknown")
+                        .to_string();
+
+                    info!("Bundle submitted successfully: {}", bundle_hash);
+
+                    Ok(PrivateSubmission {
+                        bundle_hash,
+                        pool_name: pool_name.clone(),
+                        submitted_at: chrono::Utc::now().timestamp(),
+                        estimated_inclusion_block: 0,
+                        status: SubmissionStatus::Pending,
+                    })
+                } else {
+                    let error_text = response.text().await.unwrap_or_default();
+                    warn!("Private pool rejected bundle: {}", error_text);
+                    Err(format!("Private pool rejected: {}", error_text))
+                }
+            }
+            Err(e) => {
+                warn!("Failed to submit to private pool: {}", e);
+                // Fallback: return pending status, will use public mempool
+                Ok(PrivateSubmission {
+                    bundle_hash: format!("fallback-{}", chrono::Utc::now().timestamp()),
+                    pool_name: pool_name.clone(),
+                    submitted_at: chrono::Utc::now().timestamp(),
+                    estimated_inclusion_block: 0,
+                    status: SubmissionStatus::Fallback,
+                })
+            }
+        }
     }
 
     /// Monitor mempool for MEV activity
@@ -438,6 +501,7 @@ pub enum SubmissionStatus {
     Included,
     Failed,
     Expired,
+    Fallback, // Couldn't submit to private pool, using public mempool
 }
 
 /// Mempool monitor for MEV detection

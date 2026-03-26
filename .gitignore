@@ -3,9 +3,7 @@
 Cargo.lock
 
 # Data files (runtime generated)
-data/signals.json
-data/decision.json
-data/state.json
+data/
 
 # IDE
 .idea/

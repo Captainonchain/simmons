@@ -11,18 +11,38 @@ use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 /// Known DEX router addresses on X Layer
+/// Supports override via environment variables
 pub mod routers {
     use ethers::types::Address;
     use std::str::FromStr;
+    use std::sync::OnceLock;
+
+    static OKX_DEX: OnceLock<Address> = OnceLock::new();
+    static UNISWAP_V2: OnceLock<Address> = OnceLock::new();
+
+    fn parse_address(addr: &str, name: &str) -> Address {
+        Address::from_str(addr)
+            .unwrap_or_else(|_| panic!("Invalid {} address - build error", name))
+    }
 
     /// OKX DEX aggregator router
     pub fn okx_dex() -> Address {
-        Address::from_str("0x1111111254fb6c44bAC0beD2854e76F90643097d").unwrap()
+        *OKX_DEX.get_or_init(|| {
+            std::env::var("DEX_OKX_ROUTER")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x1111111254fb6c44bAC0beD2854e76F90643097d", "OKX DEX"))
+        })
     }
 
     /// Uniswap V2 style router (if deployed)
     pub fn uniswap_v2() -> Address {
-        Address::from_str("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D").unwrap()
+        *UNISWAP_V2.get_or_init(|| {
+            std::env::var("DEX_UNISWAP_V2")
+                .ok()
+                .and_then(|a| Address::from_str(&a).ok())
+                .unwrap_or_else(|| parse_address("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", "Uniswap V2"))
+        })
     }
 }
 
