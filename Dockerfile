@@ -30,9 +30,14 @@ RUN apt-get update && apt-get install -y \
 # Copy binary from builder
 COPY --from=builder /app/target/release/simmons /app/simmons
 
-# Copy config and data directories
+# Copy config directory
 COPY config ./config
-COPY data ./data
+
+# Create data directory with empty files
+RUN mkdir -p data && \
+    echo '[]' > data/trades.json && \
+    echo '{}' > data/decision.json && \
+    echo '{}' > data/dual_brain_context.json
 
 # Expose port
 EXPOSE 3456
