@@ -252,3 +252,25 @@ button:disabled {
   font-weight: 600;
   color: var(--color-bb-bright);
 }
+
+/* Responsive: scrollable body on mobile only */
+@media (max-width: 767px) {
+  html, body, #__next {
+    overflow: auto;
+    height: auto;
+    min-height: 100%;
+  }
+  .grid-cell {
+    height: auto;
+    min-height: 300px;
+  }
+}
+
+/* Locked tab styling */
+.tab-locked {
+  cursor: not-allowed !important;
+  opacity: 0.4;
+}
+.tab-locked:hover {
+  opacity: 0.5;
+}

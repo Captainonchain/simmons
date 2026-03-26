@@ -31,7 +31,23 @@
       "Bash(node -e \"const rgl = require\\(''react-grid-layout''\\); console.log\\(Object.keys\\(rgl\\)\\)\")",
       "Bash(node -e \":*)",
       "Bash(wc:*)",
-      "Bash(ls C:/Users/0xSimba/Desktop/simmons/frontend/node_modules/react-grid-layout/lib/*.d.ts)"
+      "Bash(ls C:/Users/0xSimba/Desktop/simmons/frontend/node_modules/react-grid-layout/lib/*.d.ts)",
+      "Bash(cargo build:*)",
+      "Bash(where cargo:*)",
+      "Read(//c/Users/0xSimba/.cargo/bin/**)",
+      "Bash(export PATH=\"$PATH:/c/Users/0xSimba/.cargo/bin:$HOME/.cargo/bin\")",
+      "Bash(cargo --version)",
+      "Read(//c/Users/0xSimba/Desktop/simmons/$USERPROFILE/.cargo/**)",
+      "Bash(cmd.exe /c \"where cargo\")",
+      "Bash(git pull:*)",
+      "Bash(git checkout:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(grep \"\\\\.tsx$\")",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(grep -v \"var \\\\|function\\\\|Object\\\\|typeof\\\\|define\\\\|return\\\\|^$\\\\|tslib\\\\|setPrototype\\\\|createExporter\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }

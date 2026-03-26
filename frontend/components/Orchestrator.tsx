@@ -42,10 +42,10 @@ export const Orchestrator = memo(function Orchestrator({ orchestrator, onToast }
   }, [onToast, selectedStrategy]);
 
   return (
-    <div className="bg-bb-surface border border-bb-border h-full flex flex-col overflow-hidden">
-      <div className="px-2 py-1 border-b border-bb-border flex items-center justify-between">
+    <div className="grid-cell h-full">
+      <div className="grid-cell-header">
         <div className="flex items-center gap-2">
-          <span className="text-bb-amber font-bold text-[10px]">ORCHESTRATOR</span>
+          <span className="grid-cell-title">ORCHESTRATOR</span>
           <span className="text-bb-dim text-[9px]">/simmons-dual</span>
         </div>
         <div className="flex items-center gap-1.5">

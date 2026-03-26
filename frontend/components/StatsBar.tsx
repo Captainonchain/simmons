@@ -45,7 +45,7 @@ export const StatsBar = memo(function StatsBar({
   // Compact mode - inline stats for tab bar
   if (compact) {
     return (
-      <div className="flex items-center gap-3 text-[9px]">
+      <div className="flex items-center gap-2 md:gap-3 text-[9px] flex-wrap">
         {/* Equity + P&L */}
         <div className="flex items-center gap-1.5">
           <span className="text-bb-dim">EQ</span>
@@ -57,7 +57,7 @@ export const StatsBar = memo(function StatsBar({
           </span>
         </div>
 
-        <div className="w-px h-3 bg-bb-border" />
+        <div className="w-px h-3 bg-bb-border hidden sm:block" />
 
         {/* Win Rate */}
         <div className="flex items-center gap-1">
@@ -68,14 +68,14 @@ export const StatsBar = memo(function StatsBar({
           <span className="text-bb-dim">({totalTrades})</span>
         </div>
 
-        <div className="w-px h-3 bg-bb-border" />
+        <div className="w-px h-3 bg-bb-border hidden sm:block" />
 
         {/* Regime */}
         <span className={`px-1.5 py-0.5 text-[8px] font-bold uppercase border ${getRegimeColor(regime)}`}>
           {regime}
         </span>
 
-        <div className="w-px h-3 bg-bb-border" />
+        <div className="w-px h-3 bg-bb-border hidden sm:block" />
 
         {/* Kelly */}
         <div className="flex items-center gap-1">
@@ -83,7 +83,7 @@ export const StatsBar = memo(function StatsBar({
           <span className="text-bb-cyan font-bold">{kellySizePct.toFixed(0)}%</span>
         </div>
 
-        <div className="w-px h-3 bg-bb-border" />
+        <div className="w-px h-3 bg-bb-border hidden sm:block" />
 
         {/* Drawdown */}
         <div className="flex items-center gap-1">
@@ -100,7 +100,7 @@ export const StatsBar = memo(function StatsBar({
   return (
     <div className="bg-bb-surface h-11 border-b border-bb-border flex items-stretch shrink-0">
       {/* Equity + P&L */}
-      <div className="flex items-center gap-4 px-4 border-r border-bb-border min-w-[200px]">
+      <div className="flex items-center gap-4 px-4 border-r border-bb-border min-w-0">
         <div>
           <div className="text-[7px] text-bb-dim tracking-widest uppercase">EQUITY</div>
           <div className="text-bb-bright font-bold text-[15px] stat-value leading-none">
@@ -158,7 +158,7 @@ export const StatsBar = memo(function StatsBar({
 
       {/* Drawdown Meter */}
       <div className="flex items-center px-4 flex-1">
-        <div className="w-full max-w-[300px]">
+        <div className="w-full max-w-none md:max-w-[300px]">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[7px] text-bb-dim tracking-widest uppercase">DRAWDOWN</span>
             <span className={`text-[10px] font-medium stat-value ${drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-green"}`}>

@@ -30,9 +30,9 @@ export const ExecutionPanel = memo(function ExecutionPanel({ execMode, execution
   };
 
   return (
-    <div className="bg-bb-surface border border-bb-border h-full flex flex-col overflow-hidden">
-      <div className="px-2 py-1 border-b border-bb-border flex items-center justify-between">
-        <span className="text-bb-green font-bold text-[10px]">EXECUTION</span>
+    <div className="grid-cell h-full">
+      <div className="grid-cell-header">
+        <span className="grid-cell-title">EXECUTION</span>
         <span className={`text-[9px] font-bold ${modeColors[mode]}`}>
           ● {modeLabels[mode] ?? mode.toUpperCase()}
         </span>

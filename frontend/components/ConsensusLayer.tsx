@@ -19,9 +19,9 @@ export const ConsensusLayer = memo(function ConsensusLayer({ consensus, radarSco
   const reflect = consensus?.reflect_adjustments ?? { momentum: 0.02, mean_rev: -0.01 };
 
   return (
-    <div className="bg-bb-surface border border-bb-border h-full flex flex-col overflow-hidden">
-      <div className="px-2 py-1 border-b border-bb-border flex items-center justify-between">
-        <span className="text-bb-yellow font-bold text-[10px]">CONSENSUS</span>
+    <div className="grid-cell h-full">
+      <div className="grid-cell-header">
+        <span className="grid-cell-title">CONSENSUS</span>
         <span className={`text-[9px] font-bold ${entryApproved ? "text-bb-green" : conflict ? "text-bb-amber blink" : "text-bb-red"}`}>
           {entryApproved ? "● ENTRY OK" : conflict ? "● CONFLICT" : "● NO ENTRY"}
         </span>

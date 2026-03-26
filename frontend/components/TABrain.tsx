@@ -61,10 +61,10 @@ export const TABrain = memo(function TABrain({ taBrain }: TABrainProps) {
   const catColors: Record<string, string> = { mm: "text-bb-cyan", arb: "text-bb-magenta", dir: "text-bb-green", int: "text-bb-amber" };
 
   return (
-    <div className="bg-bb-surface border border-bb-border h-full flex flex-col overflow-hidden">
-      <div className="px-2 py-1 border-b border-bb-border flex items-center justify-between">
+    <div className="grid-cell h-full">
+      <div className="grid-cell-header">
         <div className="flex items-center gap-2">
-          <span className="text-bb-orange font-bold text-[10px]">TA BRAIN</span>
+          <span className="grid-cell-title">TA BRAIN</span>
           <span className="text-bb-dim text-[9px]">NUNCHI 14 STRATS</span>
         </div>
         <span className="text-bb-cyan text-[9px]">{apex.active_slots}/{apex.concurrent_slots} SLOTS</span>

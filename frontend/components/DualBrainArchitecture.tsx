@@ -100,7 +100,7 @@ export function DualBrainArchitecture() {
 
       <div className="grid-cell-body overflow-auto p-2">
         {/* Two-column brain layout */}
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
           {/* TA BRAIN */}
           <TABrainPanel ta={ctx?.ta} regime={ctx?.regime} />
 
@@ -309,7 +309,7 @@ function ConsensusPanel({ ctx }: { ctx?: MergedContext }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 text-[8px]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[8px]">
         <div className="text-bb-dim">
           <div className="text-[7px] text-bb-muted mb-0.5">Merge</div>
           <span className="text-bb-amber">TA (60%)</span> + <span className="text-bb-cyan">Fund (40%)</span>
@@ -336,7 +336,7 @@ function ConsensusPanel({ ctx }: { ctx?: MergedContext }) {
         </div>
       </div>
 
-      <div className="text-[7px] text-bb-muted mt-2 flex gap-4">
+      <div className="text-[7px] text-bb-muted mt-2 flex flex-col sm:flex-row gap-1 sm:gap-4">
         <span>• Entry: RADAR &gt; 170 + Positive Fund</span>
         <span>• Conflict: Trigger Claude debate</span>
         <span>• Adaptive weights via REFLECT</span>
@@ -352,7 +352,7 @@ function OrchestratorPanel({ ctx }: { ctx?: MergedContext }) {
         CLAUDE ORCHESTRATOR <span className="text-bb-dim">(/simmons-dual)</span>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 text-[8px] text-bb-dim">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[8px] text-bb-dim">
         <div className="border border-bb-border bg-bb-black p-1.5">
           <div className="text-[7px] text-bb-cyan mb-0.5">Debate</div>
           Bull/Bear/Risk
@@ -379,7 +379,7 @@ function ExecutionPanel({ mode }: { mode?: string }) {
     <div className="border border-bb-border bg-bb-surface p-2">
       <div className="text-[9px] font-bold text-bb-cyan tracking-wider mb-2">EXECUTION LAYER</div>
 
-      <div className="grid grid-cols-3 gap-2 text-[8px]">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[8px]">
         <div className={`border p-1.5 ${mode === "paper" ? "border-bb-amber bg-bb-amber/10" : "border-bb-border bg-bb-black"}`}>
           <div className="text-[7px] text-bb-amber mb-0.5">Paper</div>
           <span className="text-bb-dim">Simmons Rust engine</span>

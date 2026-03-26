@@ -22,7 +22,7 @@ export const Header = memo(function Header({ isConnected }: HeaderProps) {
   }, []);
 
   return (
-    <header className="bg-bb-panel h-9 px-4 flex items-center justify-between text-[10px] select-none border-b border-bb-border shrink-0">
+    <header className="bg-bb-panel h-auto py-2 lg:h-9 lg:py-0 px-4 flex items-center justify-between flex-wrap text-[10px] select-none border-b border-bb-border shrink-0">
       {/* Left: Logo + Name */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
@@ -37,7 +37,7 @@ export const Header = memo(function Header({ isConnected }: HeaderProps) {
       </div>
 
       {/* Center: Connection Status */}
-      <div className="flex items-center gap-6 text-[9px]">
+      <div className="hidden md:flex items-center gap-6 text-[9px]">
         <div className="flex items-center gap-2">
           <span className="text-bb-dim">ENGINE</span>
           <div className="flex items-center gap-1.5">
@@ -59,7 +59,7 @@ export const Header = memo(function Header({ isConnected }: HeaderProps) {
       {/* Right: Date/Time + Live Status */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3 text-[9px]">
-          <span className="text-bb-dim">{date}</span>
+          <span className="text-bb-dim hidden sm:inline">{date}</span>
           <span className="text-bb-bright font-semibold stat-value tracking-wider">{time}</span>
         </div>
         <div className={`px-2 py-0.5 text-[8px] font-bold tracking-wider ${

@@ -67,7 +67,7 @@ export const PortfolioChart = memo(function PortfolioChart({ portfolio }: Portfo
 
       {/* Stats Row */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-bb-border bg-bb-panel text-[9px] shrink-0">
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-2 sm:gap-5 flex-wrap">
           <div>
             <span className="text-bb-dim">Capital </span>
             <span className="text-bb-white stat-value font-medium">${capital.toLocaleString()}</span>

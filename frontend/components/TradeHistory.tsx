@@ -163,7 +163,7 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
                 <div key={trade.id} className="bg-bb-surface hover:bg-bb-raised/50 transition-colors">
                   {/* Summary Row */}
                   <div
-                    className={`px-3 py-2 flex items-center justify-between cursor-pointer border-l-2 ${style.bg}`}
+                    className={`px-3 py-2 flex items-center justify-between flex-wrap gap-1 cursor-pointer border-l-2 ${style.bg}`}
                     onClick={() => setExpandedId(isExpanded ? null : trade.id)}
                   >
                     <div className="flex items-center gap-2">
