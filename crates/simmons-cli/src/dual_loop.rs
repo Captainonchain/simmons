@@ -519,14 +519,15 @@ impl DualBrainLoop {
 
     /// Auto-execute a trade based on consensus
     async fn auto_execute_trade(&mut self, symbol: &str, ctx: &MergedContext) -> Result<()> {
-        // Skip if we already have a position in this symbol (check state)
-        {
-            let state = self.state.read().await;
-            if state.active_positions.contains_key(symbol) {
-                debug!("[AutoTrade] Skipping {} - already have position", symbol);
-                return Ok(());
-            }
-        }
+        // Paper trading: allow continuous trades (no position blocking)
+        // For live trading, uncomment the position check below:
+        // {
+        //     let state = self.state.read().await;
+        //     if state.active_positions.contains_key(symbol) {
+        //         debug!("[AutoTrade] Skipping {} - already have position", symbol);
+        //         return Ok(());
+        //     }
+        // }
 
         // Determine trade side
         let side = match ctx.consensus_action {
@@ -591,7 +592,7 @@ impl DualBrainLoop {
         match client
             .post("http://localhost:3456/api/brain/decide")
             .json(&serde_json::json!({
-                "decision": "trade",
+                "action": "trade",
                 "symbol": symbol,
                 "side": side,
                 "size_pct": size_pct,

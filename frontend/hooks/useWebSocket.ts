@@ -12,8 +12,12 @@ export function useWebSocket() {
   const connect = useCallback(() => {
     if (typeof window === "undefined") return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    // Connect directly to backend WebSocket (port 3456)
+    // Next.js rewrites don't handle WebSocket protocol upgrades properly
+    const wsUrl = process.env.NODE_ENV === "production"
+      ? `wss://${window.location.host}/ws`
+      : "ws://localhost:3456/ws";
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {

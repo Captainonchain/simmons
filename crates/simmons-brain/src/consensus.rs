@@ -344,11 +344,12 @@ impl ConsensusEngine {
         }
 
         // Determine action from merged sentiment
-        if merged_sentiment > dec!(0.3) {
+        // Paper trading: lowered threshold to 0.15 for more active trading
+        if merged_sentiment > dec!(0.15) {
             ConsensusAction::Long
-        } else if merged_sentiment < dec!(-0.3) {
+        } else if merged_sentiment < dec!(-0.15) {
             ConsensusAction::Short
-        } else if merged_sentiment.abs() < dec!(0.1) {
+        } else if merged_sentiment.abs() < dec!(0.05) {
             ConsensusAction::Wait
         } else {
             ConsensusAction::Hold

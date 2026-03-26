@@ -301,6 +301,26 @@ After each trade closes:
 - `submit_trade` - Execute paper trade
 - `check_circuit_breaker` - Check if trading enabled
 
+### Nunchi MCP (Real TA Signals)
+Use these tools to get REAL market analysis from Nunchi's 18 trading strategies:
+
+- `radar_run` - **Run RADAR opportunity scan** - returns score 0-400 with tier classification
+- `strategies` - List available trading strategies with default params
+- `run_strategy` - Start a specific strategy (engine_mm, avellaneda_mm, momentum_breakout, etc.)
+- `apex_status` - Get APEX orchestrator status (slots, positions, daily PnL)
+- `apex_run` - Start APEX multi-slot orchestrator
+- `status` - Show current positions, PnL, and risk state
+- `account` - Get Hyperliquid account balances
+- `trade` - Place a single manual order
+- `agent_memory` - Read agent learnings and param changes
+- `trade_journal` - Read structured trade records
+- `reflect_run` - Run REFLECT performance review
+
+**ENHANCED WORKFLOW**: Before making trading decisions, use Nunchi MCP to get:
+1. `radar_run` - Real opportunity scores (replaces simulated RADAR)
+2. `strategies` - Available strategy recommendations
+3. `agent_memory` - Historical learnings and mistakes
+
 ### OnchainOS MCP (for live DEX)
 - `security_token_scan` - Token security check
 - `signal_list` - Smart money signals
