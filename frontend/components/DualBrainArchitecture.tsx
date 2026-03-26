@@ -98,9 +98,9 @@ export function DualBrainArchitecture() {
         </div>
       </div>
 
-      <div className="grid-cell-body overflow-auto p-2">
-        {/* Two-column brain layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+      <div className="grid-cell-body overflow-auto p-3">
+        {/* Two-column brain layout - always side by side */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
           {/* TA BRAIN */}
           <TABrainPanel ta={ctx?.ta} regime={ctx?.regime} />
 
@@ -108,14 +108,17 @@ export function DualBrainArchitecture() {
           <FundBrainPanel fund={ctx?.fund} />
         </div>
 
-        {/* Consensus Layer */}
-        <ConsensusPanel ctx={ctx} />
+        {/* Lower panels - 3 column horizontal */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* Consensus Layer */}
+          <ConsensusPanel ctx={ctx} />
 
-        {/* Claude Orchestrator */}
-        <OrchestratorPanel ctx={ctx} />
+          {/* Claude Orchestrator */}
+          <OrchestratorPanel ctx={ctx} />
 
-        {/* Execution Layer */}
-        <ExecutionPanel mode={data?.mode} />
+          {/* Execution Layer */}
+          <ExecutionPanel mode={data?.mode} />
+        </div>
       </div>
     </div>
   );
@@ -136,69 +139,72 @@ function TABrainPanel({ ta, regime }: { ta?: TABrainOutput; regime?: string }) {
   };
 
   return (
-    <div className="border border-bb-border bg-bb-panel p-2">
-      <div className="text-[10px] font-bold text-bb-orange mb-2 tracking-wider">
+    <div className="border border-bb-border bg-bb-panel p-3 h-full">
+      <div className="text-[11px] font-bold text-bb-orange mb-3 tracking-wider">
         TA BRAIN <span className="text-bb-dim">(Nunchi 14 Strats)</span>
       </div>
 
       {/* APEX Orchestrator */}
-      <div className="border border-bb-border bg-bb-surface p-2 mb-2">
-        <div className="text-[8px] text-bb-cyan font-bold mb-1">APEX ORCHESTRATOR</div>
-        <div className="text-[8px] text-bb-dim space-y-0.5">
-          <div>• 2-3 concurrent slots</div>
-          <div>• Entry priority tiers</div>
-          <div>• ROE-based exits</div>
+      <div className="border border-bb-border bg-bb-surface p-2.5 mb-3">
+        <div className="text-[9px] text-bb-cyan font-bold mb-1.5">APEX ORCHESTRATOR</div>
+        <div className="grid grid-cols-3 gap-2 text-[8px] text-bb-dim">
+          <div>2-3 concurrent slots</div>
+          <div>Entry priority tiers</div>
+          <div>ROE-based exits</div>
         </div>
       </div>
 
       {/* RADAR / PULSE / GUARD */}
-      <div className="grid grid-cols-3 gap-1 mb-2">
-        <div className="border border-bb-border bg-bb-black p-1.5 text-center">
-          <div className="text-[7px] text-bb-dim">RADAR (15m)</div>
-          <div className={`text-[14px] font-bold ${getRadarColor(radarScore)}`}>{radarScore}</div>
-          <div className="text-[7px] text-bb-dim">{radarTier}</div>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="border border-bb-border bg-bb-black p-2.5 text-center">
+          <div className="text-[8px] text-bb-dim mb-1">RADAR (15m)</div>
+          <div className={`text-[18px] font-bold ${getRadarColor(radarScore)}`}>{radarScore}</div>
+          <div className="text-[8px] text-bb-dim mt-1">{radarTier}</div>
         </div>
-        <div className="border border-bb-border bg-bb-black p-1.5 text-center">
-          <div className="text-[7px] text-bb-dim">PULSE (60s)</div>
-          <div className="text-[14px] font-bold text-bb-amber">T{pulseTier}</div>
-          <div className="text-[7px] text-bb-dim">{pulseDir}</div>
+        <div className="border border-bb-border bg-bb-black p-2.5 text-center">
+          <div className="text-[8px] text-bb-dim mb-1">PULSE (60s)</div>
+          <div className="text-[18px] font-bold text-bb-amber">T{pulseTier}</div>
+          <div className="text-[8px] text-bb-dim mt-1">{pulseDir}</div>
         </div>
-        <div className="border border-bb-border bg-bb-black p-1.5 text-center">
-          <div className="text-[7px] text-bb-dim">GUARD (tick)</div>
-          <div className="text-[14px] font-bold text-bb-cyan">2φ</div>
-          <div className="text-[7px] text-bb-dim">stops</div>
-        </div>
-      </div>
-
-      {/* 14 Strategies */}
-      <div className="border border-bb-border bg-bb-surface p-2 mb-2">
-        <div className="text-[8px] text-bb-cyan font-bold mb-1">14 STRATEGIES:</div>
-        <div className="text-[7px] text-bb-dim space-y-0.5">
-          <div><span className="text-bb-amber">MM:</span> engine, avellaneda, regime, grid, liq</div>
-          <div><span className="text-bb-amber">ARB:</span> funding, basis</div>
-          <div><span className="text-bb-amber">DIR:</span> momentum, mean_rev</div>
-          <div><span className="text-bb-amber">INF:</span> hedge, rfq, claude</div>
+        <div className="border border-bb-border bg-bb-black p-2.5 text-center">
+          <div className="text-[8px] text-bb-dim mb-1">GUARD (tick)</div>
+          <div className="text-[18px] font-bold text-bb-cyan">2&#966;</div>
+          <div className="text-[8px] text-bb-dim mt-1">stops</div>
         </div>
       </div>
 
-      {/* Strategy Signals */}
-      <div className="space-y-1">
-        {strategies.slice(0, 4).map((s, i) => (
-          <div key={i} className="flex items-center justify-between text-[8px] border-b border-bb-border pb-1">
-            <span className="text-bb-dim">{s.strategy}</span>
-            <span className={s.signal === "buy" ? "text-bb-green" : s.signal === "sell" ? "text-bb-red" : "text-bb-amber"}>
-              {s.signal.toUpperCase()}
-            </span>
-            <span className="text-bb-dim">{(parseFloat(s.confidence) * 100).toFixed(0)}%</span>
+      {/* 14 Strategies + Signals side by side */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="border border-bb-border bg-bb-surface p-2.5">
+          <div className="text-[9px] text-bb-cyan font-bold mb-1.5">14 STRATEGIES</div>
+          <div className="text-[8px] text-bb-dim space-y-1">
+            <div><span className="text-bb-amber font-bold">MM:</span> engine, avellaneda, regime, grid, liq</div>
+            <div><span className="text-bb-amber font-bold">ARB:</span> funding, basis</div>
+            <div><span className="text-bb-amber font-bold">DIR:</span> momentum, mean_rev</div>
+            <div><span className="text-bb-amber font-bold">INF:</span> hedge, rfq, claude</div>
           </div>
-        ))}
+        </div>
+        <div className="border border-bb-border bg-bb-surface p-2.5">
+          <div className="text-[9px] text-bb-cyan font-bold mb-1.5">LIVE SIGNALS</div>
+          <div className="space-y-1.5">
+            {strategies.slice(0, 5).map((s, i) => (
+              <div key={i} className="flex items-center justify-between text-[8px] border-b border-bb-border/50 pb-1">
+                <span className="text-bb-dim">{s.strategy}</span>
+                <span className={s.signal === "buy" ? "text-bb-green font-bold" : s.signal === "sell" ? "text-bb-red font-bold" : "text-bb-amber"}>
+                  {s.signal.toUpperCase()}
+                </span>
+                <span className="text-bb-dim">{(parseFloat(s.confidence) * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Output */}
-      <div className="mt-2 pt-2 border-t border-bb-border">
-        <div className="text-[7px] text-bb-dim">Output: TABrainOutput</div>
-        <div className="text-[7px] text-bb-muted">
-          • radar_score ({radarScore}) • pulse_tier ({pulseTier}) • regime ({regime})
+      <div className="pt-2 border-t border-bb-border">
+        <div className="text-[8px] text-bb-dim">Output: TABrainOutput</div>
+        <div className="text-[8px] text-bb-muted">
+          radar_score ({radarScore}) &bull; pulse_tier ({pulseTier}) &bull; regime ({regime})
         </div>
       </div>
     </div>
@@ -218,75 +224,91 @@ function FundBrainPanel({ fund }: { fund?: FundBrainOutput }) {
   };
 
   return (
-    <div className="border border-bb-border bg-bb-panel p-2">
-      <div className="text-[10px] font-bold text-bb-orange mb-2 tracking-wider">
+    <div className="border border-bb-border bg-bb-panel p-3 h-full">
+      <div className="text-[11px] font-bold text-bb-orange mb-3 tracking-wider">
         FUNDAMENTAL BRAIN <span className="text-bb-dim">(Multi-Src)</span>
       </div>
 
-      {/* Whale Tracker */}
-      <div className="border border-bb-border bg-bb-surface p-2 mb-2">
-        <div className="text-[8px] text-bb-cyan font-bold mb-1">WHALE TRACKER (OnchainOS)</div>
-        <div className="flex justify-between items-center">
-          <span className="text-[8px] text-bb-dim">Smart money signals</span>
-          <span className={`text-[10px] font-bold ${getSentimentColor(whaleSent)}`}>
-            {(whaleSent * 100).toFixed(0)}%
-          </span>
-        </div>
-        <div className="text-[7px] text-bb-dim">• KOL tracking</div>
-      </div>
-
-      {/* Twitter/X Sentiment */}
-      <div className="border border-bb-border bg-bb-surface p-2 mb-2">
-        <div className="text-[8px] text-bb-cyan font-bold mb-1">TWITTER/X SENTIMENT</div>
-        <div className="flex justify-between items-center">
-          <span className="text-[8px] text-bb-dim">KOL mentions</span>
-          <span className={`text-[10px] font-bold ${getSentimentColor(twitterSent)}`}>
-            {(twitterSent * 100).toFixed(0)}%
-          </span>
-        </div>
-        {twitterData && (
-          <div className="text-[7px] text-bb-dim">
-            • {twitterData.mention_count} mentions • Score: {twitterData.trending_score}
-          </div>
-        )}
-      </div>
-
-      {/* News RSS Feeds */}
-      <div className="border border-bb-border bg-bb-surface p-2 mb-2">
-        <div className="text-[8px] text-bb-cyan font-bold mb-1">NEWS RSS FEEDS</div>
-        <div className="flex justify-between items-center">
-          <span className="text-[8px] text-bb-dim">Headlines sentiment</span>
-          <span className={`text-[10px] font-bold ${getSentimentColor(newsSent)}`}>
-            {(newsSent * 100).toFixed(0)}%
-          </span>
-        </div>
-        <div className="text-[7px] text-bb-dim">• CoinDesk, The Block, Decrypt</div>
-      </div>
-
-      {/* Security Scanner */}
-      <div className="border border-bb-border bg-bb-surface p-2 mb-2">
-        <div className="text-[8px] text-bb-cyan font-bold mb-1">SECURITY SCANNER</div>
-        <div className="text-[7px] text-bb-dim space-y-0.5">
-          <div className="flex justify-between">
-            <span>Honeypot detection</span>
-            <span className={fund?.security?.is_honeypot ? "text-bb-red" : "text-bb-green"}>
-              {fund?.security?.is_honeypot ? "⚠ RISK" : "✓ SAFE"}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Risk score</span>
-            <span className={(fund?.security?.risk_score ?? 0) > 50 ? "text-bb-red" : "text-bb-green"}>
-              {fund?.security?.risk_score ?? 0}/100
+      {/* Data sources - 2x2 grid */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {/* Whale Tracker */}
+        <div className="border border-bb-border bg-bb-surface p-2.5">
+          <div className="text-[9px] text-bb-cyan font-bold mb-1.5">WHALE TRACKER</div>
+          <div className="text-[8px] text-bb-dim mb-1">OnchainOS smart money</div>
+          <div className="flex justify-between items-center">
+            <span className="text-[8px] text-bb-dim">Sentiment</span>
+            <span className={`text-[12px] font-bold ${getSentimentColor(whaleSent)}`}>
+              {(whaleSent * 100).toFixed(0)}%
             </span>
           </div>
         </div>
+
+        {/* Twitter/X Sentiment */}
+        <div className="border border-bb-border bg-bb-surface p-2.5">
+          <div className="text-[9px] text-bb-cyan font-bold mb-1.5">TWITTER/X</div>
+          <div className="text-[8px] text-bb-dim mb-1">KOL mentions{twitterData ? ` (${twitterData.mention_count})` : ""}</div>
+          <div className="flex justify-between items-center">
+            <span className="text-[8px] text-bb-dim">Sentiment</span>
+            <span className={`text-[12px] font-bold ${getSentimentColor(twitterSent)}`}>
+              {(twitterSent * 100).toFixed(0)}%
+            </span>
+          </div>
+        </div>
+
+        {/* News RSS Feeds */}
+        <div className="border border-bb-border bg-bb-surface p-2.5">
+          <div className="text-[9px] text-bb-cyan font-bold mb-1.5">NEWS RSS</div>
+          <div className="text-[8px] text-bb-dim mb-1">CoinDesk, The Block, Decrypt</div>
+          <div className="flex justify-between items-center">
+            <span className="text-[8px] text-bb-dim">Sentiment</span>
+            <span className={`text-[12px] font-bold ${getSentimentColor(newsSent)}`}>
+              {(newsSent * 100).toFixed(0)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Security Scanner */}
+        <div className="border border-bb-border bg-bb-surface p-2.5">
+          <div className="text-[9px] text-bb-cyan font-bold mb-1.5">SECURITY SCAN</div>
+          <div className="text-[8px] text-bb-dim space-y-1">
+            <div className="flex justify-between">
+              <span>Honeypot</span>
+              <span className={fund?.security?.is_honeypot ? "text-bb-red font-bold" : "text-bb-green font-bold"}>
+                {fund?.security?.is_honeypot ? "RISK" : "SAFE"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Risk score</span>
+              <span className={(fund?.security?.risk_score ?? 0) > 50 ? "text-bb-red font-bold" : "text-bb-green font-bold"}>
+                {fund?.security?.risk_score ?? 0}/100
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* KOL Feed */}
+      {twitterData && twitterData.kol_mentions.length > 0 && (
+        <div className="border border-bb-border bg-bb-surface p-2.5 mb-3">
+          <div className="text-[9px] text-bb-cyan font-bold mb-1.5">KOL FEED</div>
+          <div className="space-y-1">
+            {twitterData.kol_mentions.slice(0, 3).map((kol, i) => (
+              <div key={i} className="flex items-center gap-2 text-[8px]">
+                <span className="text-bb-amber font-bold">{kol.handle}</span>
+                <span className={kol.sentiment === "bullish" ? "text-bb-green" : kol.sentiment === "bearish" ? "text-bb-red" : "text-bb-dim"}>
+                  {kol.sentiment}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Output */}
-      <div className="mt-2 pt-2 border-t border-bb-border">
-        <div className="text-[7px] text-bb-dim">Output: FundBrainOutput</div>
-        <div className="text-[7px] text-bb-muted">
-          • whale ({(whaleSent * 100).toFixed(0)}%) • twitter ({(twitterSent * 100).toFixed(0)}%) • news ({(newsSent * 100).toFixed(0)}%)
+      <div className="pt-2 border-t border-bb-border">
+        <div className="text-[8px] text-bb-dim">Output: FundBrainOutput</div>
+        <div className="text-[8px] text-bb-muted">
+          whale ({(whaleSent * 100).toFixed(0)}%) &bull; twitter ({(twitterSent * 100).toFixed(0)}%) &bull; news ({(newsSent * 100).toFixed(0)}%)
         </div>
       </div>
     </div>
@@ -299,47 +321,45 @@ function ConsensusPanel({ ctx }: { ctx?: MergedContext }) {
   const isConflict = ctx?.is_conflict ?? false;
 
   return (
-    <div className="border border-bb-border bg-bb-surface p-2 mb-2">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[9px] font-bold text-bb-cyan tracking-wider">CONSENSUS LAYER</div>
-        <div className="flex items-center gap-2">
-          <span className={`text-[8px] px-1.5 py-0.5 ${isConflict ? "bg-bb-red/20 text-bb-red border border-bb-red/50" : "bg-bb-green/20 text-bb-green border border-bb-green/50"}`}>
-            {isConflict ? "CONFLICT" : "ALIGNED"}
-          </span>
-        </div>
+    <div className="border border-bb-border bg-bb-surface p-3 h-full">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[10px] font-bold text-bb-cyan tracking-wider">CONSENSUS LAYER</div>
+        <span className={`text-[8px] px-2 py-0.5 ${isConflict ? "bg-bb-red/20 text-bb-red border border-bb-red/50" : "bg-bb-green/20 text-bb-green border border-bb-green/50"}`}>
+          {isConflict ? "CONFLICT" : "ALIGNED"}
+        </span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[8px]">
-        <div className="text-bb-dim">
-          <div className="text-[7px] text-bb-muted mb-0.5">Merge</div>
-          <span className="text-bb-amber">TA (60%)</span> + <span className="text-bb-cyan">Fund (40%)</span>
+      <div className="space-y-2 text-[9px]">
+        <div className="flex justify-between text-bb-dim">
+          <span className="text-bb-muted">Merge</span>
+          <span><span className="text-bb-amber">TA 60%</span> + <span className="text-bb-cyan">Fund 40%</span></span>
         </div>
-        <div className="text-bb-dim">
-          <div className="text-[7px] text-bb-muted mb-0.5">Sentiment</div>
-          <span className={mergedSent > 0 ? "text-bb-green" : "text-bb-red"}>
+        <div className="flex justify-between text-bb-dim">
+          <span className="text-bb-muted">Sentiment</span>
+          <span className={mergedSent > 0 ? "text-bb-green font-bold" : "text-bb-red font-bold"}>
             {(mergedSent * 100).toFixed(0)}%
           </span>
         </div>
-        <div className="text-bb-dim">
-          <div className="text-[7px] text-bb-muted mb-0.5">Confidence</div>
-          <span className="text-bb-bright">{(mergedConf * 100).toFixed(0)}%</span>
+        <div className="flex justify-between text-bb-dim">
+          <span className="text-bb-muted">Confidence</span>
+          <span className="text-bb-bright font-bold">{(mergedConf * 100).toFixed(0)}%</span>
         </div>
-        <div className="text-bb-dim">
-          <div className="text-[7px] text-bb-muted mb-0.5">Action</div>
+        <div className="flex justify-between text-bb-dim">
+          <span className="text-bb-muted">Action</span>
           <span className={
             ctx?.consensus_action === "long" ? "text-bb-green font-bold" :
             ctx?.consensus_action === "short" ? "text-bb-red font-bold" :
-            "text-bb-amber"
+            "text-bb-amber font-bold"
           }>
             {ctx?.consensus_action?.toUpperCase() ?? "HOLD"}
           </span>
         </div>
       </div>
 
-      <div className="text-[7px] text-bb-muted mt-2 flex flex-col sm:flex-row gap-1 sm:gap-4">
-        <span>• Entry: RADAR &gt; 170 + Positive Fund</span>
-        <span>• Conflict: Trigger Claude debate</span>
-        <span>• Adaptive weights via REFLECT</span>
+      <div className="text-[7px] text-bb-muted mt-3 space-y-0.5">
+        <div>RADAR &gt; 170 + Positive Fund = Entry</div>
+        <div>Conflict triggers Claude debate</div>
+        <div>Adaptive weights via REFLECT</div>
       </div>
     </div>
   );
@@ -347,27 +367,27 @@ function ConsensusPanel({ ctx }: { ctx?: MergedContext }) {
 
 function OrchestratorPanel({ ctx }: { ctx?: MergedContext }) {
   return (
-    <div className="border border-bb-border bg-bb-panel p-2 mb-2">
-      <div className="text-[9px] font-bold text-bb-orange tracking-wider mb-2">
+    <div className="border border-bb-border bg-bb-panel p-3 h-full">
+      <div className="text-[10px] font-bold text-bb-orange tracking-wider mb-3">
         CLAUDE ORCHESTRATOR <span className="text-bb-dim">(/simmons-dual)</span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[8px] text-bb-dim">
-        <div className="border border-bb-border bg-bb-black p-1.5">
-          <div className="text-[7px] text-bb-cyan mb-0.5">Debate</div>
-          Bull/Bear/Risk
+      <div className="space-y-2">
+        <div className="border border-bb-border bg-bb-black p-2">
+          <div className="text-[8px] text-bb-cyan mb-0.5">Multi-Agent Debate</div>
+          <div className="text-[9px] text-bb-dim">Bull / Bear / Risk</div>
         </div>
-        <div className="border border-bb-border bg-bb-black p-1.5">
-          <div className="text-[7px] text-bb-cyan mb-0.5">Strategy</div>
-          MM vs ARB vs DIR
+        <div className="border border-bb-border bg-bb-black p-2">
+          <div className="text-[8px] text-bb-cyan mb-0.5">Strategy Select</div>
+          <div className="text-[9px] text-bb-dim">MM vs ARB vs DIR</div>
         </div>
-        <div className="border border-bb-border bg-bb-black p-1.5">
-          <div className="text-[7px] text-bb-cyan mb-0.5">Size</div>
-          Kelly: {((parseFloat(ctx?.size_factor ?? "0") * 100)).toFixed(0)}%
+        <div className="border border-bb-border bg-bb-black p-2">
+          <div className="text-[8px] text-bb-cyan mb-0.5">Position Sizing</div>
+          <div className="text-[9px] text-bb-dim">Kelly: {((parseFloat(ctx?.size_factor ?? "0") * 100)).toFixed(0)}%</div>
         </div>
-        <div className="border border-bb-border bg-bb-black p-1.5">
-          <div className="text-[7px] text-bb-cyan mb-0.5">GUARD</div>
-          Stops synced
+        <div className="border border-bb-border bg-bb-black p-2">
+          <div className="text-[8px] text-bb-cyan mb-0.5">GUARD Stops</div>
+          <div className="text-[9px] text-bb-dim">Synced</div>
         </div>
       </div>
     </div>
@@ -376,26 +396,26 @@ function OrchestratorPanel({ ctx }: { ctx?: MergedContext }) {
 
 function ExecutionPanel({ mode }: { mode?: string }) {
   return (
-    <div className="border border-bb-border bg-bb-surface p-2">
-      <div className="text-[9px] font-bold text-bb-cyan tracking-wider mb-2">EXECUTION LAYER</div>
+    <div className="border border-bb-border bg-bb-surface p-3 h-full">
+      <div className="text-[10px] font-bold text-bb-cyan tracking-wider mb-3">EXECUTION LAYER</div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[8px]">
-        <div className={`border p-1.5 ${mode === "paper" ? "border-bb-amber bg-bb-amber/10" : "border-bb-border bg-bb-black"}`}>
-          <div className="text-[7px] text-bb-amber mb-0.5">Paper</div>
-          <span className="text-bb-dim">Simmons Rust engine</span>
+      <div className="space-y-2">
+        <div className={`border p-2 ${mode === "paper" ? "border-bb-amber bg-bb-amber/10" : "border-bb-border bg-bb-black"}`}>
+          <div className="text-[8px] text-bb-amber mb-0.5">Paper</div>
+          <div className="text-[9px] text-bb-dim">Simmons Rust engine</div>
         </div>
-        <div className={`border p-1.5 ${mode === "live" ? "border-bb-green bg-bb-green/10" : "border-bb-border bg-bb-black"}`}>
-          <div className="text-[7px] text-bb-green mb-0.5">Live DEX</div>
-          <span className="text-bb-dim">OnchainOS swap</span>
+        <div className={`border p-2 ${mode === "live" ? "border-bb-green bg-bb-green/10" : "border-bb-border bg-bb-black"}`}>
+          <div className="text-[8px] text-bb-green mb-0.5">Live DEX</div>
+          <div className="text-[9px] text-bb-dim">OnchainOS swap</div>
         </div>
-        <div className="border border-bb-border bg-bb-black p-1.5">
-          <div className="text-[7px] text-bb-blue mb-0.5">Live Perps</div>
-          <span className="text-bb-dim">Hyperliquid (opt)</span>
+        <div className="border border-bb-border bg-bb-black p-2">
+          <div className="text-[8px] text-bb-blue mb-0.5">Live Perps</div>
+          <div className="text-[9px] text-bb-dim">Hyperliquid (opt)</div>
         </div>
       </div>
 
-      <div className="text-[7px] text-bb-muted mt-2">
-        Chains: Solana • Base • ETH • Arbitrum
+      <div className="text-[8px] text-bb-muted mt-3">
+        Solana &bull; Base &bull; ETH &bull; Arbitrum
       </div>
     </div>
   );

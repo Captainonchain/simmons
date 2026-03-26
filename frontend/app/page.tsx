@@ -226,17 +226,17 @@ export default function Dashboard() {
 
       {/* Main Content */}
       {activeTab === "brain" ? (
-        /* DUAL BRAIN VIEW */
-        <div className="flex-1 grid grid-cols-12 gap-px bg-bb-border p-px overflow-hidden">
-          {/* LEFT - Dual Brain Architecture (8 cols) */}
-          <div className="col-span-8">
+        /* DUAL BRAIN VIEW - Full width layout */
+        <div className="flex-1 flex flex-col gap-px bg-bb-border p-px overflow-hidden">
+          {/* TOP - Dual Brain Architecture (full width, primary area) */}
+          <div className="flex-1 min-h-0">
             <DualBrainArchitecture />
           </div>
 
-          {/* RIGHT - Supporting Panels (4 cols) */}
-          <div className="col-span-4 flex flex-col gap-px">
+          {/* BOTTOM - Supporting Panels (full width, 3-column row) */}
+          <div className="h-[30%] min-h-0 grid grid-cols-3 gap-px">
             {/* Agent Debate */}
-            <div className="h-[45%] min-h-0">
+            <div className="min-h-0">
               <AgentDebate
                 bullConviction={nunchi?.score ?? 0.65}
                 bearConviction={1 - (nunchi?.score ?? 0.65)}
@@ -247,7 +247,7 @@ export default function Dashboard() {
             </div>
 
             {/* Circuit Breaker */}
-            <div className="h-[30%] min-h-0">
+            <div className="min-h-0">
               <CircuitBreaker
                 triggered={false}
                 riskLevel={(risk?.daily_loss_limit_used ?? 0) > 0.5 ? "elevated" : "normal"}
@@ -261,7 +261,7 @@ export default function Dashboard() {
             </div>
 
             {/* Memory Insights */}
-            <div className="flex-1 min-h-0">
+            <div className="min-h-0">
               <MemoryInsights
                 totalLearnings={portfolio?.total_trades ?? 0}
                 totalReflections={Math.round((portfolio?.win_rate ?? 0) / 100 * (portfolio?.total_trades ?? 0))}
