@@ -74,7 +74,7 @@ impl From<&Config> for DualBrainConfig {
             symbols: config.symbols.clone(),
             ta_config: TABrainConfig::default(),
             fund_config: FundBrainConfig::default(),
-            update_interval_secs: config.feeds.update_interval_ms / 1000,
+            update_interval_secs: (config.feeds.update_interval_ms / 1000).max(1),
             data_dir: PathBuf::from(&config.brain.data_dir),
             auto_invoke: config.brain.auto_invoke,
         }
