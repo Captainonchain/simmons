@@ -13,6 +13,7 @@ import { TradeHistory } from "@/components/TradeHistory";
 import { MemoryInsights } from "@/components/MemoryInsights";
 import { PortfolioChart } from "@/components/PortfolioChart";
 import { DualBrainArchitecture } from "@/components/DualBrainArchitecture";
+import { OpenPositions } from "@/components/OpenPositions";
 
 // Types for API data
 interface Trade {
@@ -62,11 +63,10 @@ export default function Dashboard() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
-        handleToast("1=Brain 2=Trading 3=How it Works L=Long S=Short", "info");
+        handleToast("1=Brain 2=Trading L=Long S=Short", "info");
       }
       if (e.key === "1") setActiveTab("brain");
       if (e.key === "2") setActiveTab("trading");
-      if (e.key === "3") handleToast("How it Works — coming soon", "info");
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -182,12 +182,12 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="min-h-screen md:h-screen flex flex-col bg-bb-black overflow-auto md:overflow-hidden">
+    <div className="h-screen flex flex-col bg-bb-black overflow-hidden">
       {/* Header - Connection status and branding */}
       <Header isConnected={isConnected} />
 
       {/* Tab Bar */}
-      <div className="bg-bb-panel border-b border-bb-border px-4 py-1 flex items-center gap-1 flex-wrap">
+      <div className="bg-bb-panel border-b border-bb-border px-4 py-1 flex items-center gap-1">
         <button
           onClick={() => setActiveTab("brain")}
           className={`px-3 py-1 text-[9px] font-bold tracking-wider uppercase transition-colors ${
@@ -208,18 +208,7 @@ export default function Dashboard() {
         >
           [2] Trading
         </button>
-        <button
-          onClick={() => handleToast("How it Works — coming soon", "info")}
-          className="tab-locked px-3 py-1 text-[9px] font-bold tracking-wider uppercase text-bb-dim flex items-center gap-1"
-          disabled
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-          [3] How it Works
-        </button>
         <div className="flex-1" />
-        <div className="hidden md:flex">
         <StatsBar
           equity={portfolio?.equity ?? 100}
           pnl={portfolio?.pnl ?? 0}
@@ -233,22 +222,21 @@ export default function Dashboard() {
           maxDrawdown={portfolio?.max_drawdown ?? 0.2}
           compact={true}
         />
-        </div>
       </div>
 
       {/* Main Content */}
       {activeTab === "brain" ? (
         /* DUAL BRAIN VIEW */
-        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-px bg-bb-border p-px overflow-auto md:overflow-hidden">
-          {/* LEFT - Dual Brain Architecture */}
-          <div className="min-h-[400px] md:min-h-0 md:col-span-8">
+        <div className="flex-1 grid grid-cols-12 gap-px bg-bb-border p-px overflow-hidden">
+          {/* LEFT - Dual Brain Architecture (8 cols) */}
+          <div className="col-span-8">
             <DualBrainArchitecture />
           </div>
 
-          {/* RIGHT - Supporting Panels */}
-          <div className="md:col-span-4 flex flex-col gap-px">
+          {/* RIGHT - Supporting Panels (4 cols) */}
+          <div className="col-span-4 flex flex-col gap-px">
             {/* Agent Debate */}
-            <div className="min-h-[280px] md:h-[45%] md:min-h-0">
+            <div className="h-[45%] min-h-0">
               <AgentDebate
                 bullConviction={nunchi?.score ?? 0.65}
                 bearConviction={1 - (nunchi?.score ?? 0.65)}
@@ -259,7 +247,7 @@ export default function Dashboard() {
             </div>
 
             {/* Circuit Breaker */}
-            <div className="min-h-[250px] md:h-[30%] md:min-h-0">
+            <div className="h-[30%] min-h-0">
               <CircuitBreaker
                 triggered={false}
                 riskLevel={(risk?.daily_loss_limit_used ?? 0) > 0.5 ? "elevated" : "normal"}
@@ -273,7 +261,7 @@ export default function Dashboard() {
             </div>
 
             {/* Memory Insights */}
-            <div className="min-h-[250px] md:flex-1 md:min-h-0">
+            <div className="flex-1 min-h-0">
               <MemoryInsights
                 totalLearnings={portfolio?.total_trades ?? 0}
                 totalReflections={Math.round((portfolio?.win_rate ?? 0) / 100 * (portfolio?.total_trades ?? 0))}
@@ -283,26 +271,26 @@ export default function Dashboard() {
         </div>
       ) : (
         /* TRADING VIEW */
-        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-px bg-bb-border p-px overflow-auto md:overflow-hidden">
-          {/* LEFT COLUMN - Charts */}
-          <div className="md:col-span-4 flex flex-col gap-px">
+        <div className="flex-1 grid grid-cols-12 gap-px bg-bb-border p-px overflow-hidden">
+          {/* LEFT COLUMN - Charts (4 cols) */}
+          <div className="col-span-4 flex flex-col gap-px">
             {/* Price Chart - Primary market view */}
-            <div className="min-h-[250px] md:flex-1 md:min-h-0">
+            <div className="flex-1 min-h-0">
               <PriceChart
                 priceHistory={l?.data_ingestion.price_history ?? {}}
                 availableSymbols={l?.data_ingestion.symbols.map((s) => s.symbol) ?? []}
               />
             </div>
             {/* Portfolio Chart - Equity curve */}
-            <div className="min-h-[250px] md:flex-1 md:min-h-0">
+            <div className="flex-1 min-h-0">
               <PortfolioChart portfolio={portfolio ?? null} />
             </div>
           </div>
 
-          {/* CENTER COLUMN - Decision & Execution */}
-          <div className="md:col-span-5 flex flex-col gap-px">
+          {/* CENTER COLUMN - Decision & Execution (5 cols) */}
+          <div className="col-span-5 flex flex-col gap-px">
             {/* Agent Debate - Multi-agent decision making */}
-            <div className="min-h-[300px] md:h-[50%] md:min-h-0">
+            <div className="h-[35%] min-h-0">
               <AgentDebate
                 bullConviction={nunchi?.score ?? 0.65}
                 bearConviction={1 - (nunchi?.score ?? 0.65)}
@@ -311,16 +299,32 @@ export default function Dashboard() {
                 isLive={isConnected}
               />
             </div>
+            {/* Open Positions - Current holdings */}
+            <div className="h-[30%] min-h-0">
+              <OpenPositions
+                positions={(l?.decision_risk.positions ?? []).map((p: { symbol: string; side: string; entry_price: number; current_price: number; size_pct: number; pnl: number; pnl_pct: number; opened_at: string }) => ({
+                  symbol: p.symbol,
+                  side: p.side as "long" | "short",
+                  entry_price: p.entry_price,
+                  current_price: p.current_price,
+                  size_pct: p.size_pct,
+                  pnl: p.pnl,
+                  pnl_pct: p.pnl_pct,
+                  opened_at: p.opened_at,
+                }))}
+                isLive={isConnected}
+              />
+            </div>
             {/* Trade History - Recent trades with details */}
-            <div className="min-h-[250px] md:flex-1 md:min-h-0">
+            <div className="flex-1 min-h-0">
               <TradeHistory trades={formattedTrades} />
             </div>
           </div>
 
-          {/* RIGHT COLUMN - Risk & Actions */}
-          <div className="md:col-span-3 flex flex-col gap-px">
+          {/* RIGHT COLUMN - Risk & Actions (3 cols) */}
+          <div className="col-span-3 flex flex-col gap-px">
             {/* Circuit Breaker - Risk monitoring */}
-            <div className="min-h-[280px] md:h-[50%] md:min-h-0">
+            <div className="h-[50%] min-h-0">
               <CircuitBreaker
                 triggered={false}
                 riskLevel={(risk?.daily_loss_limit_used ?? 0) > 0.5 ? "elevated" : "normal"}
@@ -333,7 +337,7 @@ export default function Dashboard() {
               />
             </div>
             {/* Memory Insights - Learning system */}
-            <div className="min-h-[250px] md:flex-1 md:min-h-0">
+            <div className="flex-1 min-h-0">
               <MemoryInsights
                 totalLearnings={portfolio?.total_trades ?? 0}
                 totalReflections={Math.round((portfolio?.win_rate ?? 0) / 100 * (portfolio?.total_trades ?? 0))}

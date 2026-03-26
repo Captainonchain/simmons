@@ -43,4 +43,4 @@ preferred_venues = ["okx"]
 [brain]
 data_dir = "data"
 timeout_secs = 60
-auto_invoke = false  # Disabled for now - invoke manually with /simmons-brain
+auto_invoke = true  # Enable autonomous paper trading
