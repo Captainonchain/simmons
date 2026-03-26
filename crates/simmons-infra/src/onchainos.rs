@@ -144,7 +144,7 @@ impl OnchainOSClient {
             return Err(anyhow!("OnchainOS API error {}: {}", status, text));
         }
 
-        debug!("OnchainOS response: {}", text);
+        debug!("OnchainOS response: {}", &text[..text.len().min(500)]);
 
         let response: OnchainOSResponse<T> = serde_json::from_str(&text)?;
 
@@ -160,7 +160,7 @@ impl OnchainOSClient {
     /// Get swap quote from DEX aggregator
     pub async fn get_quote(&self, request: &QuoteRequest) -> Result<QuoteResponse> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), request.chain_id.clone());
+        params.insert("chainIndex".to_string(), request.chain_id.clone());
         params.insert("fromTokenAddress".to_string(), request.from_token.clone());
         params.insert("toTokenAddress".to_string(), request.to_token.clone());
         params.insert("amount".to_string(), request.amount.clone());
@@ -169,26 +169,30 @@ impl OnchainOSClient {
             params.insert("slippage".to_string(), slippage.clone());
         }
 
-        self.request(Method::GET, "/api/v6/dex/aggregator/quote", Some(&params), None::<&()>).await
+        // API returns array, take first element
+        let quotes: Vec<QuoteResponse> = self.request(Method::GET, "/api/v6/dex/aggregator/quote", Some(&params), None::<&()>).await?;
+        quotes.into_iter().next().ok_or_else(|| anyhow!("No quote returned"))
     }
 
     /// Get swap transaction data
     pub async fn get_swap(&self, request: &SwapRequest) -> Result<SwapResponse> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), request.chain_id.clone());
+        params.insert("chainIndex".to_string(), request.chain_id.clone());
         params.insert("fromTokenAddress".to_string(), request.from_token.clone());
         params.insert("toTokenAddress".to_string(), request.to_token.clone());
         params.insert("amount".to_string(), request.amount.clone());
         params.insert("userWalletAddress".to_string(), request.user_address.clone());
-        params.insert("slippage".to_string(), request.slippage.clone());
+        params.insert("slippagePercent".to_string(), request.slippage.clone());
 
-        self.request(Method::GET, "/api/v6/dex/aggregator/swap", Some(&params), None::<&()>).await
+        // API returns array, take first element
+        let swaps: Vec<SwapResponse> = self.request(Method::GET, "/api/v6/dex/aggregator/swap", Some(&params), None::<&()>).await?;
+        swaps.into_iter().next().ok_or_else(|| anyhow!("No swap data returned"))
     }
 
     /// Get supported tokens for a chain
     pub async fn get_supported_tokens(&self, chain_id: &str) -> Result<Vec<TokenInfo>> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), chain_id.to_string());
+        params.insert("chainIndex".to_string(), chain_id.to_string());
 
         self.request(Method::GET, "/api/v6/dex/aggregator/all-tokens", Some(&params), None::<&()>).await
     }
@@ -196,7 +200,7 @@ impl OnchainOSClient {
     /// Get liquidity sources for a chain
     pub async fn get_liquidity_sources(&self, chain_id: &str) -> Result<Vec<LiquiditySource>> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), chain_id.to_string());
+        params.insert("chainIndex".to_string(), chain_id.to_string());
 
         self.request(Method::GET, "/api/v6/dex/aggregator/get-liquidity", Some(&params), None::<&()>).await
     }
@@ -206,7 +210,7 @@ impl OnchainOSClient {
     /// Get current token price
     pub async fn get_price(&self, chain_id: &str, token_address: &str) -> Result<TokenPrice> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), chain_id.to_string());
+        params.insert("chainIndex".to_string(), chain_id.to_string());
         params.insert("tokenAddress".to_string(), token_address.to_string());
 
         self.request(Method::GET, "/api/v6/dex/index/current-price", Some(&params), None::<&()>).await
@@ -215,7 +219,7 @@ impl OnchainOSClient {
     /// Get token market data
     pub async fn get_token_info(&self, chain_id: &str, token_address: &str) -> Result<TokenMarketData> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), chain_id.to_string());
+        params.insert("chainIndex".to_string(), chain_id.to_string());
         params.insert("tokenContractAddress".to_string(), token_address.to_string());
 
         self.request(Method::GET, "/api/v6/dex/market/token", Some(&params), None::<&()>).await
@@ -230,7 +234,7 @@ impl OnchainOSClient {
         limit: u32,
     ) -> Result<Vec<Candle>> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), chain_id.to_string());
+        params.insert("chainIndex".to_string(), chain_id.to_string());
         params.insert("tokenContractAddress".to_string(), token_address.to_string());
         params.insert("period".to_string(), period.to_string());
         params.insert("limit".to_string(), limit.to_string());
@@ -243,7 +247,7 @@ impl OnchainOSClient {
     /// Get token balances for an address
     pub async fn get_balances(&self, chain_id: &str, address: &str) -> Result<Vec<TokenBalance>> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), chain_id.to_string());
+        params.insert("chainIndex".to_string(), chain_id.to_string());
         params.insert("address".to_string(), address.to_string());
 
         self.request(Method::GET, "/api/v6/dex/balance/token-balances", Some(&params), None::<&()>).await
@@ -257,7 +261,7 @@ impl OnchainOSClient {
         limit: u32,
     ) -> Result<Vec<Transaction>> {
         let mut params = HashMap::new();
-        params.insert("chainId".to_string(), chain_id.to_string());
+        params.insert("chainIndex".to_string(), chain_id.to_string());
         params.insert("address".to_string(), address.to_string());
         params.insert("limit".to_string(), limit.to_string());
 
@@ -290,11 +294,11 @@ impl OnchainOSClient {
                 to_chain: to_chain.to_string(),
                 route_type: RouteType::SingleChain,
                 estimated_output: quote.to_token_amount.clone(),
-                price_impact: quote.price_impact.clone(),
+                price_impact: quote.price_impact().to_string(),
                 gas_estimate: quote.estimate_gas_fee.clone(),
                 steps: vec![RouteStep::Swap {
                     dex: quote.dex_router_list.first()
-                        .map(|d| d.router.clone())
+                        .map(|d| d.dex_protocol.dex_name.clone())
                         .unwrap_or_default(),
                     from_token: from_token.to_string(),
                     to_token: to_token.to_string(),
@@ -333,9 +337,9 @@ impl OnchainOSClient {
             value: swap.tx.value,
             gas_limit: swap.tx.gas,
             gas_price: swap.tx.gas_price,
-            from_amount: swap.from_token_amount,
-            to_amount: swap.to_token_amount,
-            min_out: swap.min_out_amount,
+            from_amount: swap.router_result.from_token_amount,
+            to_amount: swap.router_result.to_token_amount,
+            min_out: swap.tx.min_receive_amount,
         })
     }
 }
@@ -363,16 +367,33 @@ pub struct QuoteRequest {
 pub struct QuoteResponse {
     pub from_token_amount: String,
     pub to_token_amount: String,
-    pub price_impact: String,
+    #[serde(alias = "priceImpactPercent")]
+    pub price_impact_percent: String,
     pub estimate_gas_fee: String,
+    #[serde(default)]
     pub dex_router_list: Vec<DexRouter>,
+}
+
+impl QuoteResponse {
+    /// Get price impact as a decimal string
+    pub fn price_impact(&self) -> &str {
+        &self.price_impact_percent
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DexRouter {
-    pub router: String,
-    pub router_percent: String,
+    pub dex_protocol: DexProtocol,
+    pub from_token_index: String,
+    pub to_token_index: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexProtocol {
+    pub dex_name: String,
+    pub percent: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -388,10 +409,19 @@ pub struct SwapRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SwapResponse {
+    pub router_result: RouterResult,
+    pub tx: SwapTx,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RouterResult {
     pub from_token_amount: String,
     pub to_token_amount: String,
-    pub min_out_amount: String,
-    pub tx: SwapTx,
+    #[serde(default)]
+    pub estimate_gas_fee: String,
+    #[serde(default)]
+    pub price_impact_percent: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -402,15 +432,27 @@ pub struct SwapTx {
     pub value: String,
     pub gas: String,
     pub gas_price: String,
+    pub min_receive_amount: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenInfo {
-    pub token_address: String,
+    #[serde(alias = "tokenContractAddress")]
+    pub token_contract_address: String,
     pub token_symbol: String,
     pub token_name: String,
+    #[serde(deserialize_with = "deserialize_string_to_u8")]
     pub decimals: u8,
+}
+
+fn deserialize_string_to_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    let s: String = serde::Deserialize::deserialize(deserializer)?;
+    s.parse().map_err(D::Error::custom)
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -295,15 +295,15 @@ export default function Dashboard() {
             </div>
             <div className="min-h-[200px] md:min-h-0 md:h-[30%]">
               <OpenPositions
-                positions={(l?.decision_risk.positions ?? []).map((p: { symbol: string; side: string; entry_price: number; current_price: number; size_pct: number; pnl: number; pnl_pct: number; opened_at: string }) => ({
+                positions={(l?.decision_risk.positions ?? []).map((p) => ({
                   symbol: p.symbol,
                   side: p.side as "long" | "short",
                   entry_price: p.entry_price,
                   current_price: p.current_price,
-                  size_pct: p.size_pct,
+                  size_pct: p.size,
                   pnl: p.pnl,
                   pnl_pct: p.pnl_pct,
-                  opened_at: p.opened_at,
+                  opened_at: new Date().toISOString(),
                 }))}
                 isLive={isConnected}
               />

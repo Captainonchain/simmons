@@ -15,6 +15,7 @@ use simmons_brain::{
     ta_brain::{TABrain, TABrainConfig},
 };
 use simmons_core::{Config, Regime, TradingMode};
+use simmons_exec::{xlayer_executor, XLayerExecutor};
 use simmons_feeds::{
     twitter::{TwitterFeed, TwitterSentiment},
     MarketAggregator, OnchainFeed,
@@ -120,6 +121,8 @@ pub struct DualBrainLoop {
     onchain: OnchainFeed,
     twitter: TwitterFeed,
     state: Arc<RwLock<DualBrainState>>,
+    /// X Layer executor for live mainnet trading
+    xlayer_executor: Option<XLayerExecutor>,
 }
 
 impl DualBrainLoop {
@@ -133,8 +136,40 @@ impl DualBrainLoop {
             onchain: OnchainFeed::new(),
             twitter: TwitterFeed::with_defaults(),
             state: Arc::new(RwLock::new(DualBrainState::default())),
+            xlayer_executor: None,
             config,
         }
+    }
+
+    /// Create dual brain loop with live mainnet executor
+    pub async fn new_with_executor(config: DualBrainConfig, aggregator: Arc<MarketAggregator>) -> Result<Self> {
+        let xlayer_executor = if config.mode == TradingMode::Live {
+            match XLayerExecutor::from_env().await {
+                Ok(exec) => {
+                    info!("[DualBrain] X Layer executor initialized for mainnet");
+                    info!("[DualBrain] Wallet: {:?}", exec.wallet_address());
+                    Some(exec)
+                }
+                Err(e) => {
+                    warn!("[DualBrain] Failed to init X Layer executor: {} - will use paper mode", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        Ok(Self {
+            ta_brain: TABrain::new(config.ta_config.clone()),
+            fund_brain: FundBrain::new(config.fund_config.clone()),
+            consensus: ConsensusEngine::with_defaults(),
+            aggregator,
+            onchain: OnchainFeed::new(),
+            twitter: TwitterFeed::with_defaults(),
+            state: Arc::new(RwLock::new(DualBrainState::default())),
+            xlayer_executor,
+            config,
+        })
     }
 
     /// Get shared state
@@ -519,16 +554,6 @@ impl DualBrainLoop {
 
     /// Auto-execute a trade based on consensus
     async fn auto_execute_trade(&mut self, symbol: &str, ctx: &MergedContext) -> Result<()> {
-        // Paper trading: allow continuous trades (no position blocking)
-        // For live trading, uncomment the position check below:
-        // {
-        //     let state = self.state.read().await;
-        //     if state.active_positions.contains_key(symbol) {
-        //         debug!("[AutoTrade] Skipping {} - already have position", symbol);
-        //         return Ok(());
-        //     }
-        // }
-
         // Determine trade side
         let side = match ctx.consensus_action {
             ConsensusAction::Long => "long",
@@ -538,7 +563,7 @@ impl DualBrainLoop {
 
         // Calculate position size
         let size_pct = (ctx.size_factor * dec!(0.1)).to_f64().unwrap_or(0.05); // Max 10%
-        let size_pct = size_pct.max(0.02).min(0.15); // Between 2% and 15%
+        let size_pct = size_pct.max(0.02).min(0.20); // Between 2% and 20%
 
         // Get current price from aggregator (last price in history)
         let price = self.aggregator
@@ -567,8 +592,78 @@ impl DualBrainLoop {
             }
         );
 
+        // =====================================================
+        // LIVE MODE: Execute real swap on X Layer
+        // =====================================================
+        if self.config.mode == TradingMode::Live {
+            if let Some(ref executor) = self.xlayer_executor {
+                // Check position - don't open if already have one
+                {
+                    let state = self.state.read().await;
+                    if state.active_positions.contains_key(symbol) {
+                        debug!("[LiveTrade] Skipping {} - already have position", symbol);
+                        return Ok(());
+                    }
+                }
+
+                // Calculate USD amount
+                let capital = self.config.capital_usd.to_f64().unwrap_or(50.0);
+                let amount_usd = capital * size_pct;
+
+                // Map symbol to X Layer tokens
+                let (from_token, to_token) = match (side, symbol) {
+                    ("long", _) => (xlayer_executor::xlayer_tokens::USDT, xlayer_executor::xlayer_tokens::WETH),
+                    ("short", _) => (xlayer_executor::xlayer_tokens::WETH, xlayer_executor::xlayer_tokens::USDT),
+                    _ => return Ok(()),
+                };
+
+                // Convert to token amount (USDT has 6 decimals)
+                let amount = format!("{:.0}", amount_usd * 1_000_000.0);
+
+                info!(
+                    "[LiveTrade] MAINNET EXECUTION: {} {} | ${:.2} | {} -> {}",
+                    side.to_uppercase(), symbol, amount_usd, from_token, to_token
+                );
+
+                match executor.execute_swap(from_token, to_token, &amount, "1.0").await {
+                    Ok(result) => {
+                        if result.success {
+                            info!(
+                                "[LiveTrade] SUCCESS! Tx: {} | In: {} | Out: {}",
+                                result.tx_hash.as_deref().unwrap_or("?"),
+                                result.amount_in,
+                                result.amount_out
+                            );
+
+                            // Record successful trade
+                            self.record_trade(&trade_id, symbol, side, &result, &reasoning).await?;
+
+                            // Track active position
+                            let mut state = self.state.write().await;
+                            state.active_positions.insert(symbol.to_string(), trade_id);
+                        } else {
+                            error!(
+                                "[LiveTrade] FAILED! Error: {}",
+                                result.error.as_deref().unwrap_or("Unknown")
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        error!("[LiveTrade] Execution error: {}", e);
+                    }
+                }
+
+                return Ok(());
+            } else {
+                warn!("[LiveTrade] No executor available, falling back to paper mode");
+            }
+        }
+
+        // =====================================================
+        // PAPER MODE: Simulate trade
+        // =====================================================
         info!(
-            "[AutoTrade] {} {} @ {} | Size: {:.1}% | {}",
+            "[PaperTrade] {} {} @ {} | Size: {:.1}% | {}",
             side.to_uppercase(),
             symbol,
             price,
@@ -576,19 +671,8 @@ impl DualBrainLoop {
             reasoning
         );
 
-        // Submit to API
+        // Submit to local API for paper trading
         let client = reqwest::Client::new();
-        let trade_request = serde_json::json!({
-            "id": trade_id,
-            "symbol": symbol,
-            "side": side,
-            "entry_price": price.to_f64().unwrap_or(0.0),
-            "size_pct": size_pct,
-            "reasoning": reasoning,
-            "status": "open",
-            "timestamp": Utc::now().to_rfc3339(),
-        });
-
         match client
             .post("http://localhost:3456/api/brain/decide")
             .json(&serde_json::json!({
@@ -603,18 +687,68 @@ impl DualBrainLoop {
         {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    info!("[AutoTrade] Trade submitted successfully: {}", trade_id);
-                    // Track active position
+                    info!("[PaperTrade] Trade recorded: {}", trade_id);
                     let mut state = self.state.write().await;
                     state.active_positions.insert(symbol.to_string(), trade_id);
                 } else {
-                    warn!("[AutoTrade] Trade submission failed: {:?}", resp.status());
+                    warn!("[PaperTrade] Trade submission failed: {:?}", resp.status());
                 }
             }
             Err(e) => {
-                error!("[AutoTrade] Failed to submit trade: {}", e);
+                error!("[PaperTrade] Failed to submit trade: {}", e);
             }
         }
+
+        Ok(())
+    }
+
+    /// Record a live trade to trades.json
+    async fn record_trade(
+        &self,
+        trade_id: &str,
+        symbol: &str,
+        side: &str,
+        result: &simmons_exec::ExecutionResult,
+        reasoning: &str,
+    ) -> Result<()> {
+        let trades_path = self.config.data_dir.join("trades.json");
+
+        // Read existing trades
+        let mut trades_data: serde_json::Value = if trades_path.exists() {
+            std::fs::read_to_string(&trades_path)
+                .ok()
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or(serde_json::json!({"trades": []}))
+        } else {
+            serde_json::json!({"trades": []})
+        };
+
+        // Create trade record
+        let trade = serde_json::json!({
+            "id": trade_id,
+            "symbol": symbol,
+            "side": side,
+            "entry_price": result.amount_in.parse::<f64>().unwrap_or(0.0),
+            "size_pct": 0.1,
+            "reasoning": reasoning,
+            "status": "executed",
+            "outcome": if result.success { "pending" } else { "failed" },
+            "tx_hash": result.tx_hash,
+            "amount_in": result.amount_in,
+            "amount_out": result.amount_out,
+            "gas_used": result.gas_used,
+            "mode": "live",
+            "chain": "xlayer",
+            "timestamp": Utc::now().to_rfc3339(),
+        });
+
+        // Append trade
+        if let Some(trades) = trades_data.get_mut("trades").and_then(|t| t.as_array_mut()) {
+            trades.push(trade);
+        }
+
+        // Write back
+        std::fs::write(&trades_path, serde_json::to_string_pretty(&trades_data)?)?;
 
         Ok(())
     }

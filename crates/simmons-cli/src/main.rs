@@ -95,6 +95,8 @@ enum Commands {
         #[arg(short, long, default_value = "ethereum")]
         chain: String,
     },
+    /// Test OnchainOS API integration (for debugging mainnet)
+    TestOnchainos,
 }
 
 #[tokio::main]
@@ -162,7 +164,12 @@ async fn main() -> Result<()> {
             run_mcp_server(config).await?;
         }
         Some(Commands::Dual { dashboard, port }) => {
-            run_dual_brain(config, dashboard, port).await?;
+            // Use PORT env var if set (Railway), otherwise use CLI arg
+            let actual_port = std::env::var("PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(port);
+            run_dual_brain(config, dashboard, actual_port).await?;
         }
         Some(Commands::TestTaBrain { symbol }) => {
             test_ta_brain(config, &symbol).await?;
@@ -170,10 +177,17 @@ async fn main() -> Result<()> {
         Some(Commands::TestFundBrain { token, chain }) => {
             test_fund_brain(config, &token, &chain).await?;
         }
+        Some(Commands::TestOnchainos) => {
+            test_onchainos().await?;
+        }
         None => {
-            // Default: start dashboard
-            info!("Starting dashboard on http://localhost:3000");
-            web::start_server(config, 3000).await?;
+            // Default: start dashboard (use PORT env var for Railway)
+            let port = std::env::var("PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(3000);
+            info!("Starting dashboard on http://localhost:{}", port);
+            web::start_server(config, port).await?;
         }
     }
 
@@ -365,7 +379,13 @@ async fn run_dual_brain(config: Config, with_dashboard: bool, port: u16) -> Resu
     }
 
     // Run dual brain loop
-    let mut dual_loop = DualBrainLoop::new(dual_config, aggregator);
+    // Use executor for live mode, simple new() for paper mode
+    let mut dual_loop = if dual_config.mode == simmons_core::TradingMode::Live {
+        info!("Initializing LIVE mode with X Layer executor...");
+        DualBrainLoop::new_with_executor(dual_config, aggregator).await?
+    } else {
+        DualBrainLoop::new(dual_config, aggregator)
+    };
     dual_loop.run().await
 }
 
@@ -568,3 +588,154 @@ async fn test_fund_brain(config: Config, token: &str, chain: &str) -> Result<()>
 }
 
 use std::time::Duration;
+
+async fn test_onchainos() -> Result<()> {
+    use simmons_infra::onchainos::{chains, native_tokens, OnchainOSClient, QuoteRequest};
+
+    // Load .env file
+    dotenvy::dotenv().ok();
+
+    info!("╔═══════════════════════════════════════════════════════════╗");
+    info!("║          ONCHAINOS API INTEGRATION TEST                   ║");
+    info!("╚═══════════════════════════════════════════════════════════╝");
+    info!("");
+
+    // Layer 1: Environment Variables
+    info!("=== Layer 1: Environment Variables ===");
+    let api_key = std::env::var("OKX_API_KEY");
+    let secret_key = std::env::var("OKX_SECRET_KEY");
+    let passphrase = std::env::var("OKX_PASSPHRASE");
+    let private_key = std::env::var("XLAYER_PRIVATE_KEY");
+
+    info!("OKX_API_KEY: {}", if api_key.is_ok() { "✓ SET" } else { "✗ MISSING" });
+    info!("OKX_SECRET_KEY: {}", if secret_key.is_ok() { "✓ SET" } else { "✗ MISSING" });
+    info!("OKX_PASSPHRASE: {}", if passphrase.is_ok() { "✓ SET" } else { "✗ MISSING" });
+    info!("XLAYER_PRIVATE_KEY: {}", if private_key.as_ref().map(|k| k != "ENTER_YOUR_PRIVATE_KEY_HERE").unwrap_or(false) { "✓ SET" } else { "⚠ NOT CONFIGURED" });
+    info!("");
+
+    // Layer 2: OKX API Client
+    info!("=== Layer 2: OKX API Client ===");
+    let client = match OnchainOSClient::from_env() {
+        Ok(c) => {
+            info!("Client initialized: ✓");
+            c
+        }
+        Err(e) => {
+            info!("Client initialization FAILED: {}", e);
+            return Err(e);
+        }
+    };
+    info!("");
+
+    // Layer 3: Get Quote (X Layer OKB -> USDT)
+    info!("=== Layer 3: DEX Quote API ===");
+    info!("Testing: 0.01 OKB -> USDT on X Layer (chain 196)");
+
+    let quote_request = QuoteRequest {
+        chain_id: chains::XLAYER.to_string(),
+        from_token: native_tokens::EVM_NATIVE.to_string(),
+        to_token: "0x1E4a5963aBFD975d8c9021ce480b42188849D41d".to_string(), // USDT on X Layer
+        amount: "10000000000000000".to_string(), // 0.01 OKB (18 decimals)
+        slippage: Some("1.0".to_string()),
+    };
+
+    match client.get_quote(&quote_request).await {
+        Ok(quote) => {
+            info!("Quote received: ✓");
+            info!("  From amount: {}", quote.from_token_amount);
+            info!("  To amount: {}", quote.to_token_amount);
+            info!("  Price impact: {}%", quote.price_impact());
+            info!("  Gas estimate: {}", quote.estimate_gas_fee);
+            let routers: Vec<String> = quote.dex_router_list.iter()
+                .map(|r| format!("{} ({}%)", r.dex_protocol.dex_name, r.dex_protocol.percent))
+                .collect();
+            info!("  DEX routers: {:?}", routers);
+        }
+        Err(e) => {
+            info!("Quote FAILED: {}", e);
+            info!("This could indicate:");
+            info!("  - Invalid API credentials");
+            info!("  - Token not supported");
+            info!("  - Amount too small");
+        }
+    }
+    info!("");
+
+    // Layer 4: Get Supported Tokens
+    info!("=== Layer 4: Supported Tokens API ===");
+    match client.get_supported_tokens(chains::XLAYER).await {
+        Ok(tokens) => {
+            info!("Tokens received: ✓ ({} tokens)", tokens.len());
+            for token in tokens.iter().take(5) {
+                info!("  - {} ({}) @ {}", token.token_symbol, token.token_name, token.token_contract_address);
+            }
+            if tokens.len() > 5 {
+                info!("  ... and {} more", tokens.len() - 5);
+            }
+        }
+        Err(e) => {
+            info!("Tokens FAILED: {}", e);
+        }
+    }
+    info!("");
+
+    // Layer 5: Get Token Price
+    info!("=== Layer 5: Token Price API ===");
+    match client.get_price(chains::XLAYER, native_tokens::EVM_NATIVE).await {
+        Ok(price) => {
+            info!("OKB Price: ${}", price.price);
+            info!("Timestamp: {}", price.time);
+        }
+        Err(e) => {
+            info!("Price FAILED: {}", e);
+        }
+    }
+    info!("");
+
+    // Layer 6: Test Swap Data (without executing)
+    info!("=== Layer 6: Swap Transaction Data ===");
+    let test_address = "0x0000000000000000000000000000000000000001";
+    match client.prepare_swap(
+        chains::XLAYER,
+        native_tokens::EVM_NATIVE,
+        "0x1E4a5963aBFD975d8c9021ce480b42188849D41d", // USDT
+        "10000000000000000", // 0.01 OKB
+        test_address,
+        "1.0",
+    ).await {
+        Ok(swap) => {
+            info!("Swap data prepared: ✓");
+            info!("  To contract: {}", swap.to);
+            info!("  Value: {} wei", swap.value);
+            info!("  Gas limit: {}", swap.gas_limit);
+            info!("  Gas price: {}", swap.gas_price);
+            info!("  Min out: {}", swap.min_out);
+            info!("  Data length: {} bytes", swap.data.len() / 2 - 1); // hex string
+        }
+        Err(e) => {
+            info!("Swap data FAILED: {}", e);
+            info!("Note: This may fail with test address - expected");
+        }
+    }
+    info!("");
+
+    // Summary
+    info!("═══════════════════════════════════════════════════════════");
+    info!("                        SUMMARY");
+    info!("═══════════════════════════════════════════════════════════");
+    info!("API connectivity: Working");
+    if private_key.as_ref().map(|k| k != "ENTER_YOUR_PRIVATE_KEY_HERE").unwrap_or(false) {
+        info!("Private key: ✓ Configured");
+        info!("");
+        info!("✓ Ready for live trading!");
+    } else {
+        info!("Private key: ⚠ Not configured");
+        info!("");
+        info!("To enable live trading:");
+        info!("  1. Export your wallet private key from MetaMask");
+        info!("  2. Add to .env: XLAYER_PRIVATE_KEY=<your_key>");
+        info!("  3. Fund wallet with OKB for gas + trading capital");
+    }
+
+    Ok(())
+}

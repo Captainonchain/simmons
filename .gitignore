@@ -26,3 +26,6 @@ frontend/out/
 
 # External dependencies (cloned repos)
 external/
+
+# API Keys - NEVER COMMIT
+.env

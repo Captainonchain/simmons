@@ -7,6 +7,7 @@ edition.workspace = true
 simmons-core = { workspace = true }
 simmons-risk = { workspace = true }
 simmons-feeds = { workspace = true }
+simmons-infra = { workspace = true }
 tokio = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }

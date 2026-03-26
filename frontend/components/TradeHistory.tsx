@@ -180,7 +180,7 @@ export const TradeHistory = memo(function TradeHistory({ trades = MOCK_TRADES }:
                     <div className="flex items-center gap-3">
                       {trade.pnl !== undefined && (
                         <span className={`text-[10px] stat-value font-medium ${trade.pnl >= 0 ? "text-bb-green" : "text-bb-red"}`}>
-                          {trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(0)}
+                          {trade.pnl >= 0 ? "+" : ""}${Math.abs(trade.pnl) < 1 ? trade.pnl.toFixed(2) : trade.pnl.toFixed(0)}
                           <span className="text-bb-dim font-normal ml-1">
                             ({trade.pnlPct !== undefined ? (trade.pnlPct >= 0 ? "+" : "") + trade.pnlPct.toFixed(1) + "%" : ""})
                           </span>

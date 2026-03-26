@@ -2,10 +2,10 @@
 # This file configures both TA and Fundamental brains
 
 [trading]
-mode = "paper"  # "paper" or "live"
-chains = ["solana", "base", "ethereum"]
-capital_usd = 1000
-symbols = ["BTC-USDT", "ETH-USDT", "SOL-USDT"]
+mode = "paper"  # "paper" or "live" - PAPER TRADING
+chains = ["xlayer"]  # X Layer L2
+capital_usd = 50
+symbols = ["OKB-USDT", "ETH-USDT", "USDT-USDC"]
 
 # ============================================
 # TA BRAIN (Nunchi Strategy Suite)
@@ -17,10 +17,10 @@ use_nunchi = true  # Use Nunchi agent-cli strategies
 
 # APEX Orchestrator Settings
 [ta_brain.apex]
-preset = "default"  # "default", "conservative", "aggressive"
-max_slots = 3       # Maximum concurrent positions
-leverage = 10       # Leverage for perps
-daily_loss_limit = 500  # USD
+preset = "conservative"  # Conservative for live trading
+max_slots = 2            # Maximum 2 concurrent positions
+leverage = 1             # No leverage for spot trading
+daily_loss_limit = 20    # USD - matches risk settings
 
 # RADAR Screening (0-400 score)
 [ta_brain.radar]
@@ -166,29 +166,35 @@ adaptive_weights = true  # Adjust weights based on performance
 [execution]
 # OnchainOS agentic wallet for live trades
 use_onchainos_wallet = true
-slippage_tolerance = 0.02  # 2%
+slippage_tolerance = 0.01  # 1% - tighter for live
 mev_protection = true
 
-# Supported chains for DEX execution
-dex_chains = ["solana", "base", "ethereum", "arbitrum", "polygon"]
+# X Layer is the primary chain
+dex_chains = ["xlayer"]
 
-# Native token addresses
-[execution.native_tokens]
-solana = "So11111111111111111111111111111111111111112"
-ethereum = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-base = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-arbitrum = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-polygon = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+# X Layer chain config
+[execution.xlayer]
+chain_id = 196
+rpc_url = "https://rpc.xlayer.tech"
+native_token = "OKB"
+native_token_address = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+# Common tokens on X Layer
+[execution.tokens.xlayer]
+OKB = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+USDT = "0x1E4a5963aBFD975d8c9021ce480b42188849D41d"
+USDC = "0x74b7F16337b8972027F6196A17a631aC6dE26d22"
+WETH = "0x5A77f1443D16ee5761d310e38b62f77f726bC71c"
 
 # ============================================
 # RISK MANAGEMENT
 # ============================================
 
 [risk]
-max_position_pct = 0.15      # Max 15% per position
-max_drawdown = 0.20          # 20% drawdown circuit breaker
-max_consecutive_losses = 3   # Circuit breaker after 3 losses
-daily_loss_limit_usd = 100   # Daily loss limit
+max_position_pct = 0.20      # Max 20% per position ($10 max)
+max_drawdown = 0.20          # 20% drawdown circuit breaker ($10 max loss)
+max_consecutive_losses = 5   # Circuit breaker after 5 losses
+daily_loss_limit_usd = 20    # Daily loss limit $20
 
 # Position size modifiers
 [risk.size_modifiers]

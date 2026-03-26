@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "./target/release/simmons dual --dashboard"
+healthcheckPath = "/api/status"
+healthcheckTimeout = 300
+
+[build.env]
+CARGO_REGISTRIES_CRATES_IO_PROTOCOL = "sparse"

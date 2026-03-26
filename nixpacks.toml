@@ -1,0 +1,8 @@
+[phases.build]
+cmds = ["cargo build --release"]
+
+[phases.setup]
+nixPkgs = ["openssl", "pkg-config"]
+
+[start]
+cmd = "./target/release/simmons dual --dashboard"

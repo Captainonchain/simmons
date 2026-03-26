@@ -418,6 +418,16 @@ pub async fn start_server(config: Config, port: u16) -> Result<()> {
         }
     });
 
+    // Spawn position manager - closes positions on SL/TP/timeout
+    let state_for_positions = state.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(2));
+        loop {
+            interval.tick().await;
+            manage_open_positions(&state_for_positions).await;
+        }
+    });
+
     // Build router
     let app = Router::new()
         .route("/api/status", get(full_status_handler))
@@ -588,7 +598,7 @@ async fn build_full_update(state: &AppState) -> Option<DashboardUpdate> {
     };
 
     // Build Decision & Risk Layer - Calculate from trades.json (single source of truth)
-    let initial_capital = 100.0_f64;
+    let initial_capital = state.config.capital_usd.to_string().parse::<f64>().unwrap_or(100.0);
 
     // Read trades from trades.json to calculate actual stats
     let trades_path = std::path::Path::new(&state.config.brain.data_dir).join("trades.json");
@@ -644,20 +654,41 @@ async fn build_full_update(state: &AppState) -> Option<DashboardUpdate> {
     let pnl_pct = total_pnl; // Since capital is $100, pnl% = pnl$
     let drawdown = if total_pnl < 0.0 { -total_pnl / initial_capital } else { 0.0 };
 
-    let positions: Vec<PositionData> = state.portfolio.positions().into_iter().map(|p| {
-        let pnl_pct = p.pnl_percent().to_string().parse().unwrap_or(0.0);
-        PositionData {
-            symbol: p.symbol,
-            side: format!("{:?}", p.side),
-            size: p.size.to_string().parse().unwrap_or(0.0),
-            entry_price: p.entry_price.to_string().parse().unwrap_or(0.0),
-            current_price: p.current_price.to_string().parse().unwrap_or(0.0),
-            pnl: p.unrealized_pnl.to_string().parse().unwrap_or(0.0),
-            pnl_pct,
-            stop_loss: None,
-            take_profit: None,
+    // Read open positions from trades.json for realistic paper trading
+    let positions: Vec<PositionData> = {
+        let trades_path = "data/trades.json";
+        let mut pos = Vec::new();
+        if let Ok(content) = std::fs::read_to_string(trades_path) {
+            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(trades) = data.get("trades").and_then(|t| t.as_array()) {
+                    for trade in trades {
+                        if trade.get("status").and_then(|s| s.as_str()) == Some("open") {
+                            let symbol = trade.get("symbol").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                            let side = trade.get("side").and_then(|s| s.as_str()).unwrap_or("long").to_string();
+                            let entry_price = trade.get("entry_price").and_then(|p| p.as_f64()).unwrap_or(0.0);
+                            let current_price = trade.get("current_price").and_then(|p| p.as_f64()).unwrap_or(entry_price);
+                            let size_pct = trade.get("size_pct").and_then(|s| s.as_f64()).unwrap_or(0.02);
+                            let pnl_pct = trade.get("pnl_pct").and_then(|p| p.as_f64()).unwrap_or(0.0);
+                            let pnl = trade.get("pnl").and_then(|p| p.as_f64()).unwrap_or(0.0);
+
+                            pos.push(PositionData {
+                                symbol,
+                                side,
+                                size: size_pct,
+                                entry_price,
+                                current_price,
+                                pnl,
+                                pnl_pct,
+                                stop_loss: Some(-3.0),
+                                take_profit: Some(2.0),
+                            });
+                        }
+                    }
+                }
+            }
         }
-    }).collect();
+        pos
+    };
 
     let decision_risk = DecisionRiskLayer {
         portfolio: PortfolioData {
@@ -831,16 +862,54 @@ async fn portfolio_handler(State(state): State<Arc<AppState>>) -> impl IntoRespo
 }
 
 async fn positions_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let positions: Vec<_> = state.portfolio.positions().into_iter().map(|p| {
-        serde_json::json!({
-            "symbol": p.symbol,
-            "side": format!("{:?}", p.side),
-            "size": p.size.to_string(),
-            "entry_price": p.entry_price.to_string(),
-            "current_price": p.current_price.to_string(),
-            "pnl": p.unrealized_pnl.to_string()
-        })
-    }).collect();
+    // Read open positions from trades.json
+    let trades_path = "data/trades.json";
+    let mut positions = Vec::new();
+
+    if std::path::Path::new(trades_path).exists() {
+        if let Ok(content) = std::fs::read_to_string(trades_path) {
+            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(trades) = data.get("trades").and_then(|t| t.as_array()) {
+                    for trade in trades {
+                        if trade.get("status").and_then(|s| s.as_str()) == Some("open") {
+                            let symbol = trade.get("symbol").and_then(|s| s.as_str()).unwrap_or("");
+                            let entry_price = trade.get("entry_price").and_then(|p| p.as_f64()).unwrap_or(0.0);
+
+                            // Get current price from aggregator
+                            let current_price = state.aggregator
+                                .get_prices(symbol)
+                                .and_then(|prices| prices.last().copied())
+                                .map(|p| p.to_f64().unwrap_or(entry_price))
+                                .unwrap_or(entry_price);
+
+                            let side = trade.get("side").and_then(|s| s.as_str()).unwrap_or("long");
+                            let size_pct = trade.get("size_pct").and_then(|s| s.as_f64()).unwrap_or(0.02);
+
+                            // Calculate PnL
+                            let price_change = if side == "long" {
+                                (current_price - entry_price) / entry_price
+                            } else {
+                                (entry_price - current_price) / entry_price
+                            };
+                            let pnl_pct = price_change * 100.0;
+                            let pnl = price_change * size_pct * 100.0; // $100 capital
+
+                            positions.push(serde_json::json!({
+                                "symbol": symbol,
+                                "side": side,
+                                "size": size_pct,
+                                "entry_price": entry_price,
+                                "current_price": current_price,
+                                "pnl": pnl,
+                                "pnl_pct": pnl_pct
+                            }));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Json(positions)
 }
 
@@ -895,17 +964,19 @@ async fn decide_handler(
                 .and_then(|prices| prices.last().copied())
                 .unwrap_or(rust_decimal::Decimal::ZERO);
 
-            // Create new trade record
+            // Create new trade record - starts as OPEN position
             let trade = serde_json::json!({
                 "id": format!("auto_{}", chrono::Utc::now().timestamp_millis()),
                 "symbol": symbol,
                 "side": side,
                 "entry_price": price.to_f64().unwrap_or(0.0),
+                "current_price": price.to_f64().unwrap_or(0.0),
                 "size_pct": req.size_pct.unwrap_or(0.0),
                 "reasoning": req.reasoning,
-                "status": "closed",
-                "outcome": if rand::random::<f64>() > 0.4 { "win" } else { "loss" },
-                "pnl": (rand::random::<f64>() - 0.4) * 0.5,
+                "status": "open",
+                "outcome": "open",
+                "pnl": 0.0,
+                "pnl_pct": 0.0,
                 "timestamp": chrono::Utc::now().to_rfc3339(),
             });
 
@@ -1095,6 +1166,110 @@ async fn handle_ws(mut socket: WebSocket, state: Arc<AppState>) {
             if socket.send(Message::Text(json)).await.is_err() {
                 break;
             }
+        }
+    }
+}
+
+/// Manage open positions - update prices, close on SL/TP/timeout
+async fn manage_open_positions(state: &AppState) {
+    let trades_path = "data/trades.json";
+
+    // Read trades
+    let mut trades_data: serde_json::Value = match std::fs::read_to_string(trades_path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or(serde_json::json!({"trades": []})),
+        Err(_) => return,
+    };
+
+    let Some(trades) = trades_data.get_mut("trades").and_then(|t| t.as_array_mut()) else {
+        return;
+    };
+
+    let now = chrono::Utc::now();
+    let mut modified = false;
+
+    for trade in trades.iter_mut() {
+        // Skip closed trades
+        if trade.get("status").and_then(|s| s.as_str()) != Some("open") {
+            continue;
+        }
+
+        // Clone values to avoid borrow conflicts
+        let symbol = trade.get("symbol").and_then(|s| s.as_str()).unwrap_or("").to_string();
+        let side = trade.get("side").and_then(|s| s.as_str()).unwrap_or("long").to_string();
+        let entry_price = trade.get("entry_price").and_then(|p| p.as_f64()).unwrap_or(0.0);
+        let size_pct = trade.get("size_pct").and_then(|s| s.as_f64()).unwrap_or(0.02);
+        let timestamp = trade.get("timestamp").and_then(|t| t.as_str()).unwrap_or("").to_string();
+
+        // Get current price
+        let current_price = state.aggregator
+            .get_prices(&symbol)
+            .and_then(|prices| prices.last().copied())
+            .map(|p| p.to_f64().unwrap_or(entry_price))
+            .unwrap_or(entry_price);
+
+        // Calculate PnL percentage
+        let pnl_pct = if side == "long" {
+            (current_price - entry_price) / entry_price * 100.0
+        } else {
+            (entry_price - current_price) / entry_price * 100.0
+        };
+
+        // Update current price in trade
+        if let Some(obj) = trade.as_object_mut() {
+            obj.insert("current_price".to_string(), serde_json::json!(current_price));
+            obj.insert("pnl_pct".to_string(), serde_json::json!(pnl_pct));
+            obj.insert("pnl".to_string(), serde_json::json!(pnl_pct * size_pct));
+            modified = true;
+        }
+
+        // Check close conditions
+        let should_close;
+        let close_reason;
+
+        // Parse timestamp to check timeout (close after 60-180 seconds randomly)
+        let opened_at = chrono::DateTime::parse_from_rfc3339(&timestamp)
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+            .unwrap_or(now);
+        let age_secs = (now - opened_at).num_seconds();
+        let timeout_secs = 60 + (entry_price as i64 % 120); // 60-180 sec based on price
+
+        if pnl_pct <= -3.0 {
+            // Stop loss at -3%
+            should_close = true;
+            close_reason = "stop_loss";
+        } else if pnl_pct >= 2.0 {
+            // Take profit at +2%
+            should_close = true;
+            close_reason = "take_profit";
+        } else if age_secs > timeout_secs {
+            // Timeout - close at current PnL
+            should_close = true;
+            close_reason = "timeout";
+        } else {
+            should_close = false;
+            close_reason = "";
+        }
+
+        if should_close {
+            if let Some(obj) = trade.as_object_mut() {
+                obj.insert("status".to_string(), serde_json::json!("closed"));
+                obj.insert("outcome".to_string(), serde_json::json!(if pnl_pct >= 0.0 { "win" } else { "loss" }));
+                obj.insert("exit_price".to_string(), serde_json::json!(current_price));
+                obj.insert("close_reason".to_string(), serde_json::json!(close_reason));
+                obj.insert("closed_at".to_string(), serde_json::json!(now.to_rfc3339()));
+                tracing::info!(
+                    "[PaperTrade] CLOSED {} {} | Entry: {:.2} Exit: {:.2} | PnL: {:.2}% | Reason: {}",
+                    side.to_uppercase(), symbol, entry_price, current_price, pnl_pct, close_reason
+                );
+                modified = true;
+            }
+        }
+    }
+
+    // Write back if modified
+    if modified {
+        if let Ok(json) = serde_json::to_string_pretty(&trades_data) {
+            let _ = std::fs::write(trades_path, json);
         }
     }
 }
