@@ -28,7 +28,7 @@ export const PriceChart = memo(function PriceChart({ priceHistory, availableSymb
           <select
             value={sym}
             onChange={(e) => setSym(e.target.value)}
-            className="bg-bb-black border border-bb-border text-bb-bright text-[9px] px-2 py-0.5 focus:outline-none focus:border-bb-orange cursor-pointer hover:border-bb-border-light transition-colors"
+            className="bg-bb-black border border-bb-border text-bb-bright text-[10px] px-2 py-1 max-w-[120px] focus:outline-none focus:border-bb-orange cursor-pointer hover:border-bb-border-light transition-colors"
           >
             {symbols.map((s) => (
               <option key={s} value={s}>{s.replace("-USDT", "")}</option>
@@ -36,10 +36,10 @@ export const PriceChart = memo(function PriceChart({ priceHistory, availableSymb
           </select>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-bb-bright font-bold text-[13px] stat-value">
+          <span className="text-bb-bright font-bold text-[13px] stat-value leading-none">
             ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className={`text-[10px] stat-value px-1.5 py-0.5 ${isUp ? "text-bb-green bg-bb-green/10" : "text-bb-red bg-bb-red/10"}`}>
+          <span className={`text-[10px] stat-value px-2 py-1 ${isUp ? "text-bb-green bg-bb-green/10" : "text-bb-red bg-bb-red/10"}`}>
             {isUp ? "▲" : "▼"} {isUp ? "+" : ""}{change.toFixed(2)}%
           </span>
         </div>
@@ -60,7 +60,7 @@ export const PriceChart = memo(function PriceChart({ priceHistory, availableSymb
                 tick={{ fill: "#555", fontSize: 8, fontFamily: "IBM Plex Mono" }}
                 axisLine={false}
                 tickLine={false}
-                width={55}
+                width={52}
                 tickFormatter={(v) => `$${v.toLocaleString()}`}
               />
               <XAxis hide dataKey="idx" />

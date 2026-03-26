@@ -54,17 +54,17 @@ export const CircuitBreaker = memo(function CircuitBreaker({
               triggered ? "bg-bb-red blink" : canTrade ? "bg-bb-green" : "bg-bb-amber"
             }`}
           />
-          <span className={`text-[9px] font-bold ${triggered ? "text-bb-red" : canTrade ? "text-bb-green" : "text-bb-amber"}`}>
+          <span className={`text-[10px] font-bold ${triggered ? "text-bb-red" : canTrade ? "text-bb-green" : "text-bb-amber"}`}>
             {triggered ? "HALTED" : canTrade ? "ACTIVE" : "LIMITED"}
           </span>
         </div>
       </div>
 
-      <div className="grid-cell-body space-y-2">
+      <div className="grid-cell-body space-y-2.5">
         {/* Risk Level Badge */}
-        <div className={`p-2 border ${style.bg} ${style.border} flex items-center justify-between`}>
-          <span className="text-[8px] text-bb-dim uppercase tracking-wider">Risk Level</span>
-          <span className={`text-[10px] font-bold uppercase ${style.color}`}>
+        <div className={`p-2.5 border ${style.bg} ${style.border} flex items-center justify-between`}>
+          <span className="text-[9px] text-bb-dim uppercase tracking-wider">Risk Level</span>
+          <span className={`text-[11px] font-bold uppercase ${style.color}`}>
             {style.label}
           </span>
         </div>
@@ -72,25 +72,25 @@ export const CircuitBreaker = memo(function CircuitBreaker({
         {/* Triggered Alert */}
         {triggered && reason && (
           <div className="p-2 bg-bb-red/15 border border-bb-red/50 slide-in">
-            <div className="text-bb-red text-[8px] font-bold uppercase mb-1 flex items-center gap-1">
+            <div className="text-bb-red text-[9px] font-bold uppercase mb-1 flex items-center gap-1">
               <span className="blink">⚠</span> TRADING HALTED
             </div>
-            <div className="text-bb-white text-[9px]">{reason}</div>
+            <div className="text-bb-white text-[10px]">{reason}</div>
           </div>
         )}
 
         {/* Metrics */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {/* Drawdown */}
-          <div className="bg-bb-raised p-2 border border-bb-border">
-            <div className="flex items-center justify-between text-[8px] mb-1.5">
+          <div className="bg-bb-raised p-2.5 border border-bb-border">
+            <div className="flex items-center justify-between text-[9px] mb-1.5">
               <span className="text-bb-dim uppercase tracking-wider">Drawdown</span>
               <span className={`font-bold stat-value ${drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-green"}`}>
                 {drawdownPct.toFixed(1)}%
                 <span className="text-bb-dim font-normal"> / {limitPct.toFixed(0)}%</span>
               </span>
             </div>
-            <div className="h-2 bg-bb-border overflow-hidden">
+            <div className="h-[4px] bg-bb-border overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${
                   drawdownPct > 15 ? "bg-bb-red" : drawdownPct > 10 ? "bg-bb-amber" : "bg-bb-green"
@@ -101,8 +101,8 @@ export const CircuitBreaker = memo(function CircuitBreaker({
           </div>
 
           {/* Consecutive Losses */}
-          <div className="bg-bb-raised p-2 border border-bb-border">
-            <div className="flex items-center justify-between text-[8px] mb-1.5">
+          <div className="bg-bb-raised p-2.5 border border-bb-border">
+            <div className="flex items-center justify-between text-[9px] mb-1.5">
               <span className="text-bb-dim uppercase tracking-wider">Consecutive Losses</span>
               <span className={`font-bold stat-value ${consecutiveLosses >= 2 ? "text-bb-red" : "text-bb-dim"}`}>
                 {consecutiveLosses} / {maxConsecutiveLosses}
@@ -112,7 +112,7 @@ export const CircuitBreaker = memo(function CircuitBreaker({
               {Array.from({ length: maxConsecutiveLosses }).map((_, i) => (
                 <div
                   key={i}
-                  className={`flex-1 h-2 transition-colors ${
+                  className={`flex-1 h-[6px] transition-colors ${
                     i < consecutiveLosses ? "bg-bb-red" : "bg-bb-border"
                   }`}
                 />
@@ -121,14 +121,14 @@ export const CircuitBreaker = memo(function CircuitBreaker({
           </div>
 
           {/* Position Limit */}
-          <div className="bg-bb-raised p-2 border border-bb-border">
-            <div className="flex items-center justify-between text-[8px] mb-1.5">
+          <div className="bg-bb-raised p-2.5 border border-bb-border">
+            <div className="flex items-center justify-between text-[9px] mb-1.5">
               <span className="text-bb-dim uppercase tracking-wider">Position Limit</span>
               <span className={`font-bold stat-value ${posLimitPct > 80 ? "text-bb-amber" : "text-bb-cyan"}`}>
                 {posLimitPct.toFixed(0)}%
               </span>
             </div>
-            <div className="h-2 bg-bb-border overflow-hidden">
+            <div className="h-[4px] bg-bb-border overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${posLimitPct > 80 ? "bg-bb-amber" : "bg-bb-cyan"}`}
                 style={{ width: `${Math.min(100, posLimitPct)}%` }}

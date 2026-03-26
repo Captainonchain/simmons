@@ -71,26 +71,26 @@ export const AgentDebate = memo(function AgentDebate({
   const decStyle = getDecisionStyle(finalDecision);
 
   const renderVotes = (votes: AgentVote[]) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {votes.map((vote) => (
-        <div key={vote.agent} className="bg-bb-raised border border-bb-border p-2 hover:border-bb-border-light transition-colors">
+        <div key={vote.agent} className="bg-bb-raised border border-bb-border p-2.5 hover:border-bb-border-light transition-colors">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-bb-cyan text-[9px] font-semibold">{vote.agent}</span>
-            <span className={`text-[8px] px-1.5 py-0.5 font-bold border ${getRecColor(vote.recommendation)}`}>
+            <span className="text-bb-cyan text-[10px] font-semibold">{vote.agent}</span>
+            <span className={`text-[9px] px-1.5 py-0.5 font-bold border ${getRecColor(vote.recommendation)}`}>
               {vote.recommendation}
             </span>
           </div>
-          <div className="text-[8px] text-bb-dim leading-snug mb-2 line-clamp-2" title={vote.reason}>
+          <div className="text-[9px] text-bb-dim leading-snug mb-2 line-clamp-2" title={vote.reason}>
             {vote.reason}
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-1 bg-bb-border overflow-hidden">
+            <div className="flex-1 h-[3px] bg-bb-border overflow-hidden">
               <div
                 className="h-full bg-bb-cyan transition-all duration-500"
                 style={{ width: `${vote.confidence * 100}%` }}
               />
             </div>
-            <span className="text-[8px] text-bb-dim stat-value">{(vote.confidence * 100).toFixed(0)}%</span>
+            <span className="text-[9px] text-bb-dim stat-value">{(vote.confidence * 100).toFixed(0)}%</span>
           </div>
         </div>
       ))}
@@ -105,7 +105,7 @@ export const AgentDebate = memo(function AgentDebate({
           {isLive && <span className="w-1.5 h-1.5 bg-bb-green rounded-full pulse" />}
         </div>
         <div className={`flex items-center gap-2 px-2 py-0.5 ${decStyle.bg}`}>
-          <span className="text-[8px] text-bb-dim">DECISION</span>
+          <span className="text-[9px] text-bb-dim">DECISION</span>
           <span className={`text-[11px] font-bold ${decStyle.color}`}>
             {finalDecision || "PENDING"}
           </span>
@@ -114,16 +114,16 @@ export const AgentDebate = memo(function AgentDebate({
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Conviction Bars */}
-        <div className="px-3 py-2.5 border-b border-bb-border bg-bb-panel shrink-0">
+        <div className="px-3 py-3 border-b border-bb-border bg-bb-panel shrink-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[8px] text-bb-green font-medium">BULL</span>
-                <span className="text-[10px] text-bb-green stat-value font-bold">
+                <span className="text-[9px] text-bb-green font-medium">BULL</span>
+                <span className="text-[11px] text-bb-green stat-value font-bold">
                   {(bullConviction * 100).toFixed(0)}%
                 </span>
               </div>
-              <div className="h-2 bg-bb-border overflow-hidden">
+              <div className="h-[4px] bg-bb-border overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-bb-green/50 to-bb-green transition-all duration-700 ease-out"
                   style={{ width: `${animatedBull * 100}%` }}
@@ -132,12 +132,12 @@ export const AgentDebate = memo(function AgentDebate({
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[8px] text-bb-red font-medium">BEAR</span>
-                <span className="text-[10px] text-bb-red stat-value font-bold">
+                <span className="text-[9px] text-bb-red font-medium">BEAR</span>
+                <span className="text-[11px] text-bb-red stat-value font-bold">
                   {(bearConviction * 100).toFixed(0)}%
                 </span>
               </div>
-              <div className="h-2 bg-bb-border overflow-hidden">
+              <div className="h-[4px] bg-bb-border overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-bb-red/50 to-bb-red transition-all duration-700 ease-out"
                   style={{ width: `${animatedBear * 100}%` }}
@@ -157,14 +157,14 @@ export const AgentDebate = memo(function AgentDebate({
             <button
               key={tab.id}
               onClick={() => setActivePhase(tab.id as typeof activePhase)}
-              className={`flex-1 py-2 text-[9px] font-medium transition-all relative ${
+              className={`flex-1 py-2 text-[10px] font-medium transition-all relative ${
                 activePhase === tab.id
                   ? "text-bb-orange bg-bb-raised"
                   : "text-bb-dim hover:text-bb-white hover:bg-bb-raised/50"
               }`}
             >
               {tab.label}
-              <span className="ml-1 text-[8px] opacity-60">({tab.count})</span>
+              <span className="ml-1 text-[9px] opacity-60">({tab.count})</span>
               {activePhase === tab.id && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-bb-orange" />
               )}

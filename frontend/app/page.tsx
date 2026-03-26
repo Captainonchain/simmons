@@ -187,10 +187,10 @@ export default function Dashboard() {
       <Header isConnected={isConnected} />
 
       {/* Tab Bar */}
-      <div className="bg-bb-panel border-b border-bb-border px-4 py-1 flex items-center gap-1">
+      <div className="bg-bb-panel border-b border-bb-border px-3 md:px-4 py-1.5 flex items-center gap-1">
         <button
           onClick={() => setActiveTab("brain")}
-          className={`px-3 py-1 text-[9px] font-bold tracking-wider uppercase transition-colors ${
+          className={`px-3 py-1.5 text-[10px] font-bold tracking-wider uppercase transition-colors ${
             activeTab === "brain"
               ? "bg-bb-orange text-bb-black"
               : "text-bb-dim hover:text-bb-amber"
@@ -200,7 +200,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => setActiveTab("trading")}
-          className={`px-3 py-1 text-[9px] font-bold tracking-wider uppercase transition-colors ${
+          className={`px-3 py-1.5 text-[10px] font-bold tracking-wider uppercase transition-colors ${
             activeTab === "trading"
               ? "bg-bb-orange text-bb-black"
               : "text-bb-dim hover:text-bb-amber"
@@ -209,34 +209,35 @@ export default function Dashboard() {
           [2] Trading
         </button>
         <div className="flex-1" />
-        <StatsBar
-          equity={portfolio?.equity ?? 100}
-          pnl={portfolio?.pnl ?? 0}
-          pnlPct={portfolio?.pnl_pct ?? 0}
-          winRate={portfolio?.win_rate ?? 0}
-          totalTrades={portfolio?.total_trades ?? 0}
-          regime={regime?.current ?? "loading"}
-          volatility={regime?.volatility ?? 0}
-          kellySizePct={kelly?.recommended_size_pct ?? 10}
-          drawdown={portfolio?.drawdown ?? 0}
-          maxDrawdown={portfolio?.max_drawdown ?? 0.2}
-          compact={true}
-        />
+        <div className="hidden md:block">
+          <StatsBar
+            equity={portfolio?.equity ?? 100}
+            pnl={portfolio?.pnl ?? 0}
+            pnlPct={portfolio?.pnl_pct ?? 0}
+            winRate={portfolio?.win_rate ?? 0}
+            totalTrades={portfolio?.total_trades ?? 0}
+            regime={regime?.current ?? "loading"}
+            volatility={regime?.volatility ?? 0}
+            kellySizePct={kelly?.recommended_size_pct ?? 10}
+            drawdown={portfolio?.drawdown ?? 0}
+            maxDrawdown={portfolio?.max_drawdown ?? 0.2}
+            compact={true}
+          />
+        </div>
       </div>
 
       {/* Main Content */}
       {activeTab === "brain" ? (
-        /* DUAL BRAIN VIEW - Full width layout */
-        <div className="flex-1 flex flex-col gap-px bg-bb-border p-px overflow-hidden">
+        /* DUAL BRAIN VIEW - Full width, responsive */
+        <div className="flex-1 flex flex-col gap-px bg-bb-border p-px overflow-hidden md:overflow-hidden overflow-y-auto">
           {/* TOP - Dual Brain Architecture (full width, primary area) */}
-          <div className="flex-1 min-h-0">
+          <div className="min-h-[400px] md:min-h-0 md:flex-[7] shrink-0 md:shrink">
             <DualBrainArchitecture />
           </div>
 
-          {/* BOTTOM - Supporting Panels (full width, 3-column row) */}
-          <div className="h-[30%] min-h-0 grid grid-cols-3 gap-px">
-            {/* Agent Debate */}
-            <div className="min-h-0">
+          {/* BOTTOM - Supporting Panels (3-col on desktop, stacked on mobile) */}
+          <div className="min-h-[300px] md:min-h-0 md:flex-[3] grid grid-cols-1 md:grid-cols-3 gap-px">
+            <div className="min-h-[200px] md:min-h-0">
               <AgentDebate
                 bullConviction={nunchi?.score ?? 0.65}
                 bearConviction={1 - (nunchi?.score ?? 0.65)}
@@ -245,9 +246,7 @@ export default function Dashboard() {
                 isLive={isConnected}
               />
             </div>
-
-            {/* Circuit Breaker */}
-            <div className="min-h-0">
+            <div className="min-h-[200px] md:min-h-0">
               <CircuitBreaker
                 triggered={false}
                 riskLevel={(risk?.daily_loss_limit_used ?? 0) > 0.5 ? "elevated" : "normal"}
@@ -259,9 +258,7 @@ export default function Dashboard() {
                 canTrade={true}
               />
             </div>
-
-            {/* Memory Insights */}
-            <div className="min-h-0">
+            <div className="min-h-[200px] md:min-h-0">
               <MemoryInsights
                 totalLearnings={portfolio?.total_trades ?? 0}
                 totalReflections={Math.round((portfolio?.win_rate ?? 0) / 100 * (portfolio?.total_trades ?? 0))}
@@ -270,27 +267,24 @@ export default function Dashboard() {
           </div>
         </div>
       ) : (
-        /* TRADING VIEW */
-        <div className="flex-1 grid grid-cols-12 gap-px bg-bb-border p-px overflow-hidden">
-          {/* LEFT COLUMN - Charts (4 cols) */}
-          <div className="col-span-4 flex flex-col gap-px">
-            {/* Price Chart - Primary market view */}
-            <div className="flex-1 min-h-0">
+        /* TRADING VIEW - responsive grid */
+        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-px bg-bb-border p-px overflow-y-auto md:overflow-hidden">
+          {/* LEFT COLUMN - Charts */}
+          <div className="min-h-[250px] md:min-h-0 md:col-span-4 flex flex-col gap-px">
+            <div className="min-h-[200px] md:min-h-0 md:flex-1">
               <PriceChart
                 priceHistory={l?.data_ingestion.price_history ?? {}}
                 availableSymbols={l?.data_ingestion.symbols.map((s) => s.symbol) ?? []}
               />
             </div>
-            {/* Portfolio Chart - Equity curve */}
-            <div className="flex-1 min-h-0">
+            <div className="min-h-[200px] md:min-h-0 md:flex-1">
               <PortfolioChart portfolio={portfolio ?? null} />
             </div>
           </div>
 
-          {/* CENTER COLUMN - Decision & Execution (5 cols) */}
-          <div className="col-span-5 flex flex-col gap-px">
-            {/* Agent Debate - Multi-agent decision making */}
-            <div className="h-[35%] min-h-0">
+          {/* CENTER COLUMN - Decision & Execution */}
+          <div className="min-h-[300px] md:min-h-0 md:col-span-5 flex flex-col gap-px">
+            <div className="min-h-[200px] md:min-h-0 md:h-[35%]">
               <AgentDebate
                 bullConviction={nunchi?.score ?? 0.65}
                 bearConviction={1 - (nunchi?.score ?? 0.65)}
@@ -299,8 +293,7 @@ export default function Dashboard() {
                 isLive={isConnected}
               />
             </div>
-            {/* Open Positions - Current holdings */}
-            <div className="h-[30%] min-h-0">
+            <div className="min-h-[200px] md:min-h-0 md:h-[30%]">
               <OpenPositions
                 positions={(l?.decision_risk.positions ?? []).map((p: { symbol: string; side: string; entry_price: number; current_price: number; size_pct: number; pnl: number; pnl_pct: number; opened_at: string }) => ({
                   symbol: p.symbol,
@@ -315,16 +308,14 @@ export default function Dashboard() {
                 isLive={isConnected}
               />
             </div>
-            {/* Trade History - Recent trades with details */}
-            <div className="flex-1 min-h-0">
+            <div className="min-h-[200px] md:min-h-0 md:flex-1">
               <TradeHistory trades={formattedTrades} />
             </div>
           </div>
 
-          {/* RIGHT COLUMN - Risk & Actions (3 cols) */}
-          <div className="col-span-3 flex flex-col gap-px">
-            {/* Circuit Breaker - Risk monitoring */}
-            <div className="h-[50%] min-h-0">
+          {/* RIGHT COLUMN - Risk & Actions */}
+          <div className="min-h-[200px] md:min-h-0 md:col-span-3 flex flex-col gap-px">
+            <div className="min-h-[200px] md:min-h-0 md:h-[50%]">
               <CircuitBreaker
                 triggered={false}
                 riskLevel={(risk?.daily_loss_limit_used ?? 0) > 0.5 ? "elevated" : "normal"}
@@ -336,8 +327,7 @@ export default function Dashboard() {
                 canTrade={true}
               />
             </div>
-            {/* Memory Insights - Learning system */}
-            <div className="flex-1 min-h-0">
+            <div className="min-h-[200px] md:min-h-0 md:flex-1">
               <MemoryInsights
                 totalLearnings={portfolio?.total_trades ?? 0}
                 totalReflections={Math.round((portfolio?.win_rate ?? 0) / 100 * (portfolio?.total_trades ?? 0))}
@@ -350,7 +340,7 @@ export default function Dashboard() {
       {/* Toast notifications */}
       {toast && (
         <div
-          className="fixed bottom-3 right-3 px-4 py-2 text-[10px] font-bold tracking-wide uppercase slide-in z-50 shadow-lg"
+          className="fixed bottom-3 right-3 px-4 py-2 text-[10px] font-bold tracking-wide uppercase slide-in z-50 shadow-lg max-w-[300px]"
           style={{
             background: toast.type === "success" ? "#00DD55" : toast.type === "error" ? "#FF2222" : "#FFAA00",
             color: "#000",

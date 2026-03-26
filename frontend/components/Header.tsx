@@ -27,17 +27,17 @@ export const Header = memo(function Header({ isConnected }: HeaderProps) {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-bb-orange flex items-center justify-center">
-            <span className="text-bb-black font-bold text-[12px]">S</span>
+            <span className="text-bb-black font-bold text-[13px]">S</span>
           </div>
           <div className="flex flex-col">
             <span className="text-bb-orange font-bold tracking-widest text-[11px] leading-none">SIMMONS</span>
-            <span className="text-bb-dim text-[7px] tracking-wider leading-none mt-0.5">DUAL BRAIN v3.0</span>
+            <span className="text-bb-dim text-[8px] tracking-wider leading-none mt-0.5">DUAL BRAIN v3.0</span>
           </div>
         </div>
       </div>
 
       {/* Center: Connection Status */}
-      <div className="hidden md:flex items-center gap-6 text-[9px]">
+      <div className="hidden md:flex items-center gap-6 text-[10px]">
         <div className="flex items-center gap-2">
           <span className="text-bb-dim">ENGINE</span>
           <div className="flex items-center gap-1.5">
@@ -58,11 +58,11 @@ export const Header = memo(function Header({ isConnected }: HeaderProps) {
 
       {/* Right: Date/Time + Live Status */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3 text-[9px]">
+        <div className="flex items-center gap-3 text-[10px]">
           <span className="text-bb-dim hidden sm:inline">{date}</span>
           <span className="text-bb-bright font-semibold stat-value tracking-wider">{time}</span>
         </div>
-        <div className={`px-2 py-0.5 text-[8px] font-bold tracking-wider ${
+        <div className={`px-2 py-0.5 text-[9px] font-bold tracking-wider ${
           isConnected
             ? "bg-bb-green/20 text-bb-green border border-bb-green/30"
             : "bg-bb-red/20 text-bb-red border border-bb-red/30 blink"

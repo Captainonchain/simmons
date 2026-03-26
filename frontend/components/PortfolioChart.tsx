@@ -56,18 +56,18 @@ export const PortfolioChart = memo(function PortfolioChart({ portfolio }: Portfo
           <span className="text-[8px] text-bb-dim">EQUITY CURVE</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-bb-bright font-bold text-[13px] stat-value">
+          <span className="text-bb-bright font-bold text-[13px] stat-value leading-none">
             ${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className={`text-[10px] stat-value px-1.5 py-0.5 ${isUp ? "text-bb-green bg-bb-green/10" : "text-bb-red bg-bb-red/10"}`}>
+          <span className={`text-[10px] stat-value px-2 py-1 ${isUp ? "text-bb-green bg-bb-green/10" : "text-bb-red bg-bb-red/10"}`}>
             {isUp ? "▲" : "▼"} {isUp ? "+" : ""}{pnl.toFixed(2)} ({pnlPct.toFixed(2)}%)
           </span>
         </div>
       </div>
 
       {/* Stats Row */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-bb-border bg-bb-panel text-[9px] shrink-0">
-        <div className="flex items-center gap-2 sm:gap-5 flex-wrap">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-bb-border bg-bb-panel text-[10px] shrink-0">
+        <div className="flex items-center gap-3 sm:gap-5 flex-wrap">
           <div>
             <span className="text-bb-dim">Capital </span>
             <span className="text-bb-white stat-value font-medium">${capital.toLocaleString()}</span>
@@ -85,7 +85,7 @@ export const PortfolioChart = memo(function PortfolioChart({ portfolio }: Portfo
             </span>
           </div>
         </div>
-        <div className={`px-2 py-0.5 text-[8px] font-bold ${isUp ? "bg-bb-green/15 text-bb-green" : "bg-bb-red/15 text-bb-red"}`}>
+        <div className={`px-2 py-1 text-[9px] font-bold ${isUp ? "bg-bb-green/15 text-bb-green" : "bg-bb-red/15 text-bb-red"}`}>
           {isUp ? "▲ PROFIT" : "▼ LOSS"}
         </div>
       </div>
@@ -105,7 +105,7 @@ export const PortfolioChart = memo(function PortfolioChart({ portfolio }: Portfo
               tick={{ fill: "#555", fontSize: 8, fontFamily: "IBM Plex Mono" }}
               axisLine={false}
               tickLine={false}
-              width={50}
+              width={52}
               tickFormatter={(v) => `$${v.toFixed(0)}`}
             />
             <Tooltip

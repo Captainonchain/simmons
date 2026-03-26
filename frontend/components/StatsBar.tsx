@@ -45,7 +45,7 @@ export const StatsBar = memo(function StatsBar({
   // Compact mode - inline stats for tab bar
   if (compact) {
     return (
-      <div className="flex items-center gap-2 md:gap-3 text-[9px] flex-wrap">
+      <div className="flex items-center gap-2 md:gap-3 text-[10px] flex-wrap">
         {/* Equity + P&L */}
         <div className="flex items-center gap-1.5">
           <span className="text-bb-dim">EQ</span>
@@ -71,7 +71,7 @@ export const StatsBar = memo(function StatsBar({
         <div className="w-px h-3 bg-bb-border hidden sm:block" />
 
         {/* Regime */}
-        <span className={`px-1.5 py-0.5 text-[8px] font-bold uppercase border ${getRegimeColor(regime)}`}>
+        <span className={`px-1.5 py-0.5 text-[9px] font-bold uppercase border ${getRegimeColor(regime)}`}>
           {regime}
         </span>
 
@@ -102,8 +102,8 @@ export const StatsBar = memo(function StatsBar({
       {/* Equity + P&L */}
       <div className="flex items-center gap-4 px-4 border-r border-bb-border min-w-0">
         <div>
-          <div className="text-[7px] text-bb-dim tracking-widest uppercase">EQUITY</div>
-          <div className="text-bb-bright font-bold text-[15px] stat-value leading-none">
+          <div className="text-[8px] text-bb-dim tracking-widest uppercase">EQUITY</div>
+          <div className="text-bb-bright font-bold text-[14px] stat-value leading-none">
             ${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
@@ -111,7 +111,7 @@ export const StatsBar = memo(function StatsBar({
           <div className={`text-[11px] font-bold stat-value ${isUp ? "text-bb-green" : "text-bb-red"}`}>
             {isUp ? "+" : ""}{pnl.toFixed(2)}
           </div>
-          <div className={`text-[8px] stat-value ${isUp ? "text-bb-green/70" : "text-bb-red/70"}`}>
+          <div className={`text-[9px] stat-value ${isUp ? "text-bb-green/70" : "text-bb-red/70"}`}>
             {isUp ? "+" : ""}{pnlPct.toFixed(2)}%
           </div>
         </div>
@@ -120,12 +120,12 @@ export const StatsBar = memo(function StatsBar({
       {/* Win Rate */}
       <div className="flex items-center px-4 border-r border-bb-border">
         <div>
-          <div className="text-[7px] text-bb-dim tracking-widest uppercase">WIN RATE</div>
+          <div className="text-[8px] text-bb-dim tracking-widest uppercase">WIN RATE</div>
           <div className="flex items-baseline gap-2">
-            <span className={`font-bold text-[15px] stat-value leading-none ${winRate >= 50 ? "text-bb-green" : "text-bb-red"}`}>
+            <span className={`font-bold text-[14px] stat-value leading-none ${winRate >= 50 ? "text-bb-green" : "text-bb-red"}`}>
               {winRate.toFixed(0)}%
             </span>
-            <span className="text-[9px] text-bb-dim">{totalTrades} trades</span>
+            <span className="text-[10px] text-bb-dim">{totalTrades} trades</span>
           </div>
         </div>
       </div>
@@ -133,12 +133,12 @@ export const StatsBar = memo(function StatsBar({
       {/* Regime */}
       <div className="flex items-center px-4 border-r border-bb-border">
         <div>
-          <div className="text-[7px] text-bb-dim tracking-widest uppercase">REGIME</div>
+          <div className="text-[8px] text-bb-dim tracking-widest uppercase">REGIME</div>
           <div className="flex items-center gap-2">
             <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${getRegimeColor(regime)}`}>
               {regime}
             </span>
-            <span className="text-[9px] text-bb-dim">σ {volatility.toFixed(2)}</span>
+            <span className="text-[10px] text-bb-dim">σ {volatility.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -146,26 +146,26 @@ export const StatsBar = memo(function StatsBar({
       {/* Kelly Size */}
       <div className="flex items-center px-4 border-r border-bb-border">
         <div>
-          <div className="text-[7px] text-bb-dim tracking-widest uppercase">KELLY SIZE</div>
+          <div className="text-[8px] text-bb-dim tracking-widest uppercase">KELLY SIZE</div>
           <div className="flex items-baseline gap-1">
-            <span className="text-bb-cyan font-bold text-[15px] stat-value leading-none">
+            <span className="text-bb-cyan font-bold text-[14px] stat-value leading-none">
               {kellySizePct.toFixed(0)}%
             </span>
-            <span className="text-[8px] text-bb-dim">½K</span>
+            <span className="text-[9px] text-bb-dim">½K</span>
           </div>
         </div>
       </div>
 
       {/* Drawdown Meter */}
       <div className="flex items-center px-4 flex-1">
-        <div className="w-full max-w-none md:max-w-[300px]">
+        <div className="w-full">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[7px] text-bb-dim tracking-widest uppercase">DRAWDOWN</span>
+            <span className="text-[8px] text-bb-dim tracking-widest uppercase">DRAWDOWN</span>
             <span className={`text-[10px] font-medium stat-value ${drawdownPct > 15 ? "text-bb-red" : drawdownPct > 10 ? "text-bb-amber" : "text-bb-green"}`}>
               {drawdownPct.toFixed(1)}% / {maxDdPct.toFixed(0)}%
             </span>
           </div>
-          <div className="h-2 bg-bb-border overflow-hidden relative">
+          <div className="h-[4px] bg-bb-border overflow-hidden relative">
             {/* Threshold markers */}
             <div className="absolute top-0 bottom-0 left-[50%] w-px bg-bb-amber/50" />
             <div className="absolute top-0 bottom-0 left-[75%] w-px bg-bb-red/50" />

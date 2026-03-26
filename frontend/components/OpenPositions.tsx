@@ -40,7 +40,7 @@ export const OpenPositions = memo(function OpenPositions({
           <span className="grid-cell-title">OPEN POSITIONS</span>
           {isLive && <span className="w-1.5 h-1.5 bg-bb-green rounded-full pulse" />}
         </div>
-        <span className="text-[9px] text-bb-dim">{positions.length} active</span>
+        <span className="text-[10px] text-bb-dim">{positions.length} active</span>
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -48,7 +48,7 @@ export const OpenPositions = memo(function OpenPositions({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="text-bb-dim text-[10px] uppercase tracking-wider mb-1">No Open Positions</div>
-              <div className="text-bb-muted text-[9px]">Waiting for signals...</div>
+              <div className="text-bb-muted text-[10px]">Waiting for signals...</div>
             </div>
           </div>
         ) : (
@@ -58,11 +58,11 @@ export const OpenPositions = memo(function OpenPositions({
               const isProfit = pos.pnl >= 0;
 
               return (
-                <div key={idx} className="p-2 hover:bg-bb-raised/50 transition-colors">
+                <div key={idx} className="p-3 hover:bg-bb-raised/50 transition-colors">
                   {/* Symbol + Side */}
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className={`text-[8px] px-1.5 py-0.5 font-bold border ${
+                      <span className={`text-[9px] px-1.5 py-0.5 font-bold border ${
                         isLong
                           ? "text-bb-green bg-bb-green/10 border-bb-green/30"
                           : "text-bb-red bg-bb-red/10 border-bb-red/30"
@@ -71,28 +71,28 @@ export const OpenPositions = memo(function OpenPositions({
                       </span>
                       <span className="text-bb-bright text-[11px] font-semibold">{pos.symbol}</span>
                     </div>
-                    <span className="text-[8px] text-bb-dim">{formatTime(pos.opened_at)}</span>
+                    <span className="text-[9px] text-bb-dim">{formatTime(pos.opened_at)}</span>
                   </div>
 
                   {/* Prices */}
-                  <div className="grid grid-cols-3 gap-2 mb-1.5">
+                  <div className="grid grid-cols-3 gap-2 mb-2">
                     <div>
-                      <div className="text-[7px] text-bb-dim uppercase">Entry</div>
+                      <div className="text-[8px] text-bb-dim uppercase">Entry</div>
                       <div className="text-[10px] text-bb-white font-medium">${formatPrice(pos.entry_price)}</div>
                     </div>
                     <div>
-                      <div className="text-[7px] text-bb-dim uppercase">Current</div>
+                      <div className="text-[8px] text-bb-dim uppercase">Current</div>
                       <div className="text-[10px] text-bb-cyan font-medium">${formatPrice(pos.current_price)}</div>
                     </div>
                     <div>
-                      <div className="text-[7px] text-bb-dim uppercase">Size</div>
+                      <div className="text-[8px] text-bb-dim uppercase">Size</div>
                       <div className="text-[10px] text-bb-white font-medium">{(pos.size_pct * 100).toFixed(0)}%</div>
                     </div>
                   </div>
 
                   {/* P&L Bar */}
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-bb-border overflow-hidden relative">
+                    <div className="flex-1 h-[4px] bg-bb-border overflow-hidden relative">
                       {/* Center line */}
                       <div className="absolute top-0 bottom-0 left-1/2 w-px bg-bb-dim/50" />
                       {/* P&L bar */}
@@ -106,7 +106,7 @@ export const OpenPositions = memo(function OpenPositions({
                         }}
                       />
                     </div>
-                    <span className={`text-[10px] font-bold stat-value min-w-[50px] text-right ${
+                    <span className={`text-[11px] font-bold stat-value min-w-[55px] text-right ${
                       isProfit ? "text-bb-green" : "text-bb-red"
                     }`}>
                       {isProfit ? "+" : ""}{pos.pnl_pct.toFixed(2)}%

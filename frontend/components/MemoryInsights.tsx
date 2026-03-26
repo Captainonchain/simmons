@@ -81,7 +81,7 @@ export const MemoryInsights = memo(function MemoryInsights({
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-1.5 text-[8px] uppercase transition-all relative ${
+            className={`flex-1 py-2 text-[9px] uppercase transition-all relative ${
               tab === t ? "text-bb-orange bg-bb-raised" : "text-bb-dim hover:text-bb-white hover:bg-bb-raised/50"
             }`}
           >
@@ -91,22 +91,22 @@ export const MemoryInsights = memo(function MemoryInsights({
         ))}
       </div>
 
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 overflow-auto p-2.5">
         {tab === "stats" && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {sortedAgents.map(([name, stats]) => (
-              <div key={name} className="bg-bb-raised border border-bb-border p-2 hover:border-bb-border-light transition-colors">
+              <div key={name} className="bg-bb-raised border border-bb-border p-2.5 hover:border-bb-border-light transition-colors">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-bb-cyan text-[9px] font-medium">{name}</span>
+                  <span className="text-bb-cyan text-[10px] font-medium">{name}</span>
                   <span className={`text-[11px] font-bold stat-value ${getAccuracyColor(stats.accuracy)}`}>
                     {(stats.accuracy * 100).toFixed(0)}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[8px] text-bb-dim">
+                  <span className="text-[9px] text-bb-dim">
                     {stats.correctPredictions}/{stats.totalPredictions} correct
                   </span>
-                  <div className="w-16 h-1.5 bg-bb-border overflow-hidden">
+                  <div className="w-20 h-[3px] bg-bb-border overflow-hidden">
                     <div
                       className={`h-full transition-all ${getAccuracyColor(stats.accuracy).replace('text-', 'bg-')}`}
                       style={{ width: `${stats.accuracy * 100}%` }}
@@ -119,9 +119,9 @@ export const MemoryInsights = memo(function MemoryInsights({
         )}
 
         {tab === "lessons" && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {recentLessons.map((lesson, i) => (
-              <div key={i} className="bg-bb-raised border border-bb-border p-2 text-[9px] hover:border-bb-blue/30 transition-colors">
+              <div key={i} className="bg-bb-raised border border-bb-border p-2.5 text-[10px] hover:border-bb-blue/30 transition-colors">
                 <span className="text-bb-blue mr-2">→</span>
                 <span className="text-bb-white">{lesson}</span>
               </div>
@@ -133,12 +133,12 @@ export const MemoryInsights = memo(function MemoryInsights({
           <div className="space-y-3">
             {/* Winning Patterns */}
             <div>
-              <div className="text-[8px] text-bb-green uppercase tracking-wider mb-1.5 font-medium">
+              <div className="text-[9px] text-bb-green uppercase tracking-wider mb-1.5 font-medium">
                 ✓ Winning Patterns
               </div>
               <div className="space-y-1">
                 {winningPatterns.map((p, i) => (
-                  <div key={i} className="bg-bb-raised border border-bb-green/20 p-1.5 text-[8px] hover:border-bb-green/40 transition-colors">
+                  <div key={i} className="bg-bb-raised border border-bb-green/20 p-2.5 text-[9px] hover:border-bb-green/40 transition-colors">
                     <span className="text-bb-white">{p}</span>
                   </div>
                 ))}
@@ -147,12 +147,12 @@ export const MemoryInsights = memo(function MemoryInsights({
 
             {/* Avoid Patterns */}
             <div>
-              <div className="text-[8px] text-bb-red uppercase tracking-wider mb-1.5 font-medium">
+              <div className="text-[9px] text-bb-red uppercase tracking-wider mb-1.5 font-medium">
                 ✗ Avoid Patterns
               </div>
               <div className="space-y-1">
                 {avoidPatterns.map((p, i) => (
-                  <div key={i} className="bg-bb-raised border border-bb-red/20 p-1.5 text-[8px] hover:border-bb-red/40 transition-colors">
+                  <div key={i} className="bg-bb-raised border border-bb-red/20 p-2.5 text-[9px] hover:border-bb-red/40 transition-colors">
                     <span className="text-bb-white">{p}</span>
                   </div>
                 ))}

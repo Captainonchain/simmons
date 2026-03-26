@@ -88,6 +88,19 @@ body {
 }
 .glow { animation: glow 2s ease-in-out infinite; }
 
+/* ── Design System Tokens ── */
+
+/* Type scale: 4 sizes only */
+.text-xs { font-size: 8px; }    /* labels, captions */
+.text-sm { font-size: 10px; }   /* secondary text, badges */
+.text-base { font-size: 11px; } /* body text */
+.text-lg { font-size: 13px; }   /* stat values, emphasis */
+
+/* Standard bar heights */
+.bar-sm { height: 3px; }
+.bar-md { height: 4px; }
+.bar-lg { height: 6px; }
+
 /* Grid cell styling - core panel component */
 .grid-cell {
   background: var(--color-bb-surface);
@@ -112,16 +125,16 @@ body {
 .grid-cell-header {
   background: var(--color-bb-panel);
   border-bottom: 1px solid var(--color-bb-border);
-  padding: 6px 10px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 28px;
+  min-height: 32px;
   flex-shrink: 0;
 }
 
 .grid-cell-title {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -131,7 +144,7 @@ body {
 .grid-cell-body {
   flex: 1;
   overflow: auto;
-  padding: 8px;
+  padding: 10px;
 }
 
 /* Selection styling */
@@ -225,6 +238,7 @@ button:disabled {
   height: 4px;
   background: var(--color-bb-border);
   overflow: hidden;
+  border-radius: 1px;
 }
 
 .progress-bar-fill {
@@ -236,7 +250,7 @@ button:disabled {
 .metric-card {
   background: var(--color-bb-raised);
   border: 1px solid var(--color-bb-border);
-  padding: 8px 10px;
+  padding: 10px 12px;
 }
 
 .metric-card-label {
@@ -244,11 +258,11 @@ button:disabled {
   color: var(--color-bb-dim);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .metric-card-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-bb-bright);
 }
