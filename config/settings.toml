@@ -20,7 +20,7 @@ max_positions = 5
 [feeds]
 okx_ws_url = "wss://ws.okx.com:8443/ws/v5/public"
 price_window_size = 100
-update_interval_ms = 5000  # 5 seconds to avoid spamming Claude
+update_interval_ms = 30000  # 30 seconds - realistic trading interval
 xlayer_enabled = true
 xlayer_poll_interval_ms = 2000
 news_enabled = true

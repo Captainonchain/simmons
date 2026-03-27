@@ -426,6 +426,22 @@ impl DualBrainLoop {
         (token, chain)
     }
 
+    /// Check if there's an open position for this symbol in trades.json
+    fn check_open_position_in_trades(&self, symbol: &str) -> bool {
+        let trades_path = self.config.data_dir.join("trades.json");
+        if let Ok(content) = std::fs::read_to_string(&trades_path) {
+            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(trades) = data.get("trades").and_then(|t| t.as_array()) {
+                    return trades.iter().any(|t| {
+                        t.get("symbol").and_then(|s| s.as_str()) == Some(symbol) &&
+                        t.get("status").and_then(|s| s.as_str()) == Some("open")
+                    });
+                }
+            }
+        }
+        false
+    }
+
     /// Detect market regime from prices
     fn detect_regime(&self, prices: &[Decimal]) -> Regime {
         if prices.len() < 20 {
@@ -662,6 +678,15 @@ impl DualBrainLoop {
         // =====================================================
         // PAPER MODE: Simulate trade
         // =====================================================
+
+        // Check if we already have an open position for this symbol in trades.json
+        // This is more reliable than internal state since positions can be closed by web.rs
+        let has_open_position = self.check_open_position_in_trades(symbol);
+        if has_open_position {
+            debug!("[PaperTrade] Skipping {} - already have open position in trades.json", symbol);
+            return Ok(());
+        }
+
         info!(
             "[PaperTrade] {} {} @ {} | Size: {:.1}% | {}",
             side.to_uppercase(),
